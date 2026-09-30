@@ -17,7 +17,7 @@ export function Header() {
     <div className="container mx-auto px-4"><div className="flex min-h-20 items-center justify-between gap-3">
       <Link to="/" className="flex shrink-0 items-center gap-2" aria-label={SITE.brand}>
         <img src={logo} alt="" className="h-9 w-9 object-contain rounded-md bg-[#faf7f2] sm:h-14 sm:w-14" width="56" height="56" />
-        <span className="flex flex-col"><span className="text-base sm:text-lg font-bold leading-snug">Волшебно тут</span><span className="text-xs sm:text-sm text-muted-foreground">Amazy Apart · {t('upgrade.moscow')}</span></span>
+        <span className="flex flex-col"><span className="font-heading text-base sm:text-lg font-bold leading-snug">Волшебно тут</span><span className="text-xs sm:text-sm text-muted-foreground">Amazy Apart · {t('upgrade.moscow')}</span></span>
       </Link>
       <nav aria-label={t('upgrade.menu')} className="hidden xl:flex items-center gap-1">{links.map(([href, label]) => <Link key={href} to={href} aria-current={location.pathname.replace(/\/$/, '') === href.replace(/\/$/, '') ? 'page' : undefined} className="rounded-lg px-3 py-3 text-sm font-medium hover:bg-accent aria-[current=page]:bg-accent">{label}</Link>)}</nav>
       <div className="flex items-center gap-1 sm:gap-3">
