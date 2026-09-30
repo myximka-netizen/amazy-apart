@@ -18,6 +18,10 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Prepare approved brand icons
+        run: |
+          npm install --prefix /tmp/amazy-image-tools --no-save --package-lock=false sharp@0.34.5
+          AMAZY_IMAGE_TOOLS=/tmp/amazy-image-tools node scripts/generate-icons.mjs --emit
       - run: npm ci
       - run: npm run check
       - run: npm run build

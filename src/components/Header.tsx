@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { SITE, trackGoal } from '@/lib/site';
-const logo = '/logo.png';
+const logo = '/logo.png?v=2';
 export function Header() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
@@ -16,7 +16,7 @@ export function Header() {
     <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[60] focus:bg-white focus:p-4">{t('upgrade.skip')}</a>
     <div className="container mx-auto px-4"><div className="flex min-h-20 items-center justify-between gap-3">
       <Link to="/" className="flex shrink-0 items-center gap-2" aria-label={SITE.brand}>
-        <img src={logo} alt="" className="h-9 w-9 object-contain sm:h-14 sm:w-14" width="56" height="56" />
+        <img src={logo} alt="" className="h-9 w-9 object-contain rounded-md bg-[#faf7f2] sm:h-14 sm:w-14" width="56" height="56" />
         <span className="flex flex-col"><span className="text-base sm:text-lg font-bold leading-snug">Волшебно тут</span><span className="text-xs sm:text-sm text-muted-foreground">Amazy Apart · {t('upgrade.moscow')}</span></span>
       </Link>
       <nav aria-label={t('upgrade.menu')} className="hidden xl:flex items-center gap-1">{links.map(([href, label]) => <Link key={href} to={href} aria-current={location.pathname.replace(/\/$/, '') === href.replace(/\/$/, '') ? 'page' : undefined} className="rounded-lg px-3 py-3 text-sm font-medium hover:bg-accent aria-[current=page]:bg-accent">{label}</Link>)}</nav>
