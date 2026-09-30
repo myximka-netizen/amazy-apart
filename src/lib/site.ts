@@ -4,8 +4,8 @@ export const SITE = {
   email: 'info@volshebno-tut.ru', supportEmail: 'support@volshebno-tut.ru',
   telegram: 'https://t.me/Volshebno_tyt', whatsapp: 'https://wa.me/79955085808',
   maxPhone: '+79999947354', maxDisplayPhone: '+7 999 994-73-54',
-  // Paste the profile link shared from MAX here; a phone number is not a profile URL.
-  maxProfileUrl: '' as string,
+  // Profile link supplied by the owner; keep the complete case-sensitive URL.
+  maxProfileUrl: 'https://max.ru/u/f9LHodD0cOIwf5cut6Q6zehywppvSEDtNHLjrHEdFoocJ4wMC6UtJJZ7TJk' as string,
   logo: 'https://amazy-apart.ru/logo.png',
   socialImage: 'https://amazy-apart.ru/og-image.png',
   bookingToken: 'HYkUIAGFQD',

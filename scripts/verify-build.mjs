@@ -15,6 +15,7 @@ async function localResource(url) {
   const file = resolve(dist, '.' + pathname, extname(pathname) ? '' : 'index.html');
   await access(file).catch(() => { throw new Error('Missing local resource: ' + pathname); });
 }
+const maxUrl = 'https://max.ru/u/f9LHodD0cOIwf5cut6Q6zehywppvSEDtNHLjrHEdFoocJ4wMC6UtJJZ7TJk';
 const seenResources = new Set();
 for (const url of urls) {
   const path = new URL(url).pathname;
@@ -24,6 +25,12 @@ for (const url of urls) {
   assert.equal([...html.matchAll(/<title\b/g)].length, 1, url + ': one title');
   const meta = tags(html, 'meta');
   const links = tags(html, 'link');
+  const maxLinks = tags(html, 'a').filter(a => a.href === maxUrl);
+  assert.ok(maxLinks.length > 0, url + ': real MAX profile link');
+  for (const link of maxLinks) {
+    assert.equal(link.target, '_blank');
+    assert.match(link.rel, /noopener/);
+  }
   const metadata = name => meta.find(m => m.name === name || m.property === name)?.content;
   assert.equal(meta.filter(m => m.name === 'description').length, 1, url + ': one description');
   assert.ok(metadata('description')?.length > 20, url + ': description');
@@ -48,6 +55,7 @@ for (const url of urls) {
   for (const match of html.matchAll(/<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)) {
     const data = JSON.parse(match[1]);
     assert.ok(data['@type'], url + ': schema type');
+    if (data['@type'] === 'Organization' || data['@type'] === 'LodgingBusiness') assert.ok(data.sameAs.includes(maxUrl), url + ': MAX sameAs');
     assert.ok(!match[1].includes('/hero-image.jpg'), 'Obsolete schema image');
     if (data['@type'] === 'LodgingBusiness') assert.equal(data.image, origin + '/og-image.png');
   }
@@ -74,3 +82,21 @@ assert.equal(og.readUInt32BE(20), 909);
 const notFound = await readFile(resolve(dist, '404.html'), 'utf8');
 assert.match(notFound, /noindex/);
 console.log('Verified 42 localized pages: metadata, canonical, hreflang, local links/assets, JSON-LD, preview images, guarantee copy and 404.');
+
+for (const [name, size] of [['favicon-16x16.png',16], ['favicon-32x32.png',32], ['favicon-48x48.png',48], ['favicon.png',48], ['apple-touch-icon.png',180], ['icon-192x192.png',192], ['icon-512x512.png',512], ['icon-maskable-512x512.png',512]]) {
+  const png = await readFile(resolve(dist, name));
+  assert.equal(png.readUInt32BE(16), size, name + ': width');
+  assert.equal(png.readUInt32BE(20), size, name + ': height');
+}
+const manifest = JSON.parse(await readFile(resolve(dist, 'manifest.json'), 'utf8'));
+for (const icon of manifest.icons) {
+  const png = await readFile(resolve(dist, '.' + new URL(icon.src, origin).pathname));
+  assert.equal(icon.sizes, png.readUInt32BE(16) + 'x' + png.readUInt32BE(20));
+}
+const ico = await readFile(resolve(dist, 'favicon.ico'));
+assert.equal(ico.readUInt16LE(2), 1);
+assert.equal(ico.readUInt16LE(4), 3);
+const logo = await readFile(resolve(dist, 'logo.png'));
+assert.equal(logo[25], 6, 'Logo must retain RGBA transparency');
+assert.ok(manifest.icons.some(icon => icon.purpose === 'maskable'), 'Separate maskable icon');
+console.log('Verified exact MAX links, sameAs, native favicon/mobile icon sizes and transparent logo.');

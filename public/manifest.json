@@ -4,42 +4,34 @@
   "description": "Современные апартаменты для посуточной аренды в Москве. Честные фото, прозрачные цены, поддержка 24/7.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1a365d",
+  "background_color": "#faf7f2",
+  "theme_color": "#a24b23",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon-16x16.png",
-      "sizes": "16x16",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/favicon-32x32.png",
-      "sizes": "32x32",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-192x192.png",
+      "src": "/icon-192x192.png?v=2",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/icon-512x512.png?v=2",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
+      "src": "/icon-maskable-512x512.png?v=2",
+      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "maskable"
     }
   ],
-  "categories": ["travel", "lifestyle", "business"],
+  "categories": [
+    "travel",
+    "lifestyle",
+    "business"
+  ],
   "lang": "ru-RU",
   "dir": "ltr"
 }
