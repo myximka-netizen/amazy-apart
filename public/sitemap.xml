@@ -1,75 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-  <!-- Главная страница -->
-  <url>
-    <loc>https://amazy-apart.ru/</loc>
-    <lastmod>2025-10-08</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  
-  <!-- О нас -->
-  <url>
-    <loc>https://amazy-apart.ru/about</loc>
-    <lastmod>2025-10-08</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  
-  <!-- Квартиры -->
-  <url>
-    <loc>https://amazy-apart.ru/apartments</loc>
-    <lastmod>2025-10-08</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  
-  <!-- Квартира 1 -->
-  <url>
-    <loc>https://amazy-apart.ru/apartment/1</loc>
-    <lastmod>2025-10-08</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  
-  <!-- Квартира 2 -->
-  <url>
-    <loc>https://amazy-apart.ru/apartment/2</loc>
-    <lastmod>2025-10-08</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  
-  <!-- Квартира 3 -->
-  <url>
-    <loc>https://amazy-apart.ru/apartment/3</loc>
-    <lastmod>2025-10-08</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  
-  <!-- Контакты -->
-  <url>
-    <loc>https://amazy-apart.ru/contacts</loc>
-    <lastmod>2025-10-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  
-  <!-- Специальные предложения -->
-  <url>
-    <loc>https://amazy-apart.ru/offers</loc>
-    <lastmod>2025-10-08</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  
-  <!-- Для владельцев -->
-  <url>
-    <loc>https://amazy-apart.ru/owners</loc>
-    <lastmod>2025-10-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-</urlset>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml"><url><loc>https://amazy-apart.ru/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/" /></url>
+<url><loc>https://amazy-apart.ru/apartments/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartments/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartments/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartments/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartments/" /></url>
+<url><loc>https://amazy-apart.ru/apartments/dinamo/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartments/dinamo/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartments/dinamo/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartments/dinamo/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartments/dinamo/" /></url>
+<url><loc>https://amazy-apart.ru/apartments/leningradskiy-prospekt/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartments/leningradskiy-prospekt/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartments/leningradskiy-prospekt/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartments/leningradskiy-prospekt/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartments/leningradskiy-prospekt/" /></url>
+<url><loc>https://amazy-apart.ru/apartments/carskaya-ploshad/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartments/carskaya-ploshad/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartments/carskaya-ploshad/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartments/carskaya-ploshad/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartments/carskaya-ploshad/" /></url>
+<url><loc>https://amazy-apart.ru/business-travel/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/business-travel/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/business-travel/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/business-travel/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/business-travel/" /></url>
+<url><loc>https://amazy-apart.ru/long-stay/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/long-stay/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/long-stay/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/long-stay/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/long-stay/" /></url>
+<url><loc>https://amazy-apart.ru/about/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/about/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/about/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/about/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/about/" /></url>
+<url><loc>https://amazy-apart.ru/contacts/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/contacts/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/contacts/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/contacts/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/contacts/" /></url>
+<url><loc>https://amazy-apart.ru/owners/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/owners/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/owners/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/owners/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/owners/" /></url>
+<url><loc>https://amazy-apart.ru/offers/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/offers/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/offers/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/offers/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/offers/" /></url>
+<url><loc>https://amazy-apart.ru/apartment/1/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartment/1/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartment/1/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartment/1/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartment/1/" /></url>
+<url><loc>https://amazy-apart.ru/apartment/2/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartment/2/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartment/2/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartment/2/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartment/2/" /></url>
+<url><loc>https://amazy-apart.ru/apartment/3/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartment/3/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartment/3/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartment/3/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartment/3/" /></url>
+<url><loc>https://amazy-apart.ru/en/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/" /></url>
+<url><loc>https://amazy-apart.ru/en/apartments/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartments/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartments/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartments/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartments/" /></url>
+<url><loc>https://amazy-apart.ru/en/apartments/dinamo/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartments/dinamo/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartments/dinamo/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartments/dinamo/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartments/dinamo/" /></url>
+<url><loc>https://amazy-apart.ru/en/apartments/leningradskiy-prospekt/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartments/leningradskiy-prospekt/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartments/leningradskiy-prospekt/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartments/leningradskiy-prospekt/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartments/leningradskiy-prospekt/" /></url>
+<url><loc>https://amazy-apart.ru/en/apartments/carskaya-ploshad/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartments/carskaya-ploshad/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartments/carskaya-ploshad/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartments/carskaya-ploshad/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartments/carskaya-ploshad/" /></url>
+<url><loc>https://amazy-apart.ru/en/business-travel/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/business-travel/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/business-travel/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/business-travel/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/business-travel/" /></url>
+<url><loc>https://amazy-apart.ru/en/long-stay/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/long-stay/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/long-stay/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/long-stay/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/long-stay/" /></url>
+<url><loc>https://amazy-apart.ru/en/about/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/about/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/about/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/about/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/about/" /></url>
+<url><loc>https://amazy-apart.ru/en/contacts/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/contacts/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/contacts/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/contacts/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/contacts/" /></url>
+<url><loc>https://amazy-apart.ru/en/owners/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/owners/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/owners/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/owners/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/owners/" /></url>
+<url><loc>https://amazy-apart.ru/en/offers/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/offers/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/offers/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/offers/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/offers/" /></url>
+<url><loc>https://amazy-apart.ru/en/apartment/1/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartment/1/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartment/1/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartment/1/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartment/1/" /></url>
+<url><loc>https://amazy-apart.ru/en/apartment/2/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartment/2/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartment/2/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartment/2/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartment/2/" /></url>
+<url><loc>https://amazy-apart.ru/en/apartment/3/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartment/3/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartment/3/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartment/3/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartment/3/" /></url>
+<url><loc>https://amazy-apart.ru/zh/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/" /></url>
+<url><loc>https://amazy-apart.ru/zh/apartments/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartments/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartments/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartments/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartments/" /></url>
+<url><loc>https://amazy-apart.ru/zh/apartments/dinamo/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartments/dinamo/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartments/dinamo/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartments/dinamo/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartments/dinamo/" /></url>
+<url><loc>https://amazy-apart.ru/zh/apartments/leningradskiy-prospekt/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartments/leningradskiy-prospekt/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartments/leningradskiy-prospekt/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartments/leningradskiy-prospekt/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartments/leningradskiy-prospekt/" /></url>
+<url><loc>https://amazy-apart.ru/zh/apartments/carskaya-ploshad/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartments/carskaya-ploshad/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartments/carskaya-ploshad/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartments/carskaya-ploshad/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartments/carskaya-ploshad/" /></url>
+<url><loc>https://amazy-apart.ru/zh/business-travel/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/business-travel/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/business-travel/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/business-travel/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/business-travel/" /></url>
+<url><loc>https://amazy-apart.ru/zh/long-stay/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/long-stay/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/long-stay/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/long-stay/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/long-stay/" /></url>
+<url><loc>https://amazy-apart.ru/zh/about/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/about/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/about/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/about/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/about/" /></url>
+<url><loc>https://amazy-apart.ru/zh/contacts/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/contacts/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/contacts/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/contacts/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/contacts/" /></url>
+<url><loc>https://amazy-apart.ru/zh/owners/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/owners/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/owners/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/owners/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/owners/" /></url>
+<url><loc>https://amazy-apart.ru/zh/offers/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/offers/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/offers/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/offers/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/offers/" /></url>
+<url><loc>https://amazy-apart.ru/zh/apartment/1/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartment/1/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartment/1/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartment/1/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartment/1/" /></url>
+<url><loc>https://amazy-apart.ru/zh/apartment/2/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartment/2/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartment/2/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartment/2/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartment/2/" /></url>
+<url><loc>https://amazy-apart.ru/zh/apartment/3/</loc><xhtml:link rel="alternate" hreflang="ru" href="https://amazy-apart.ru/apartment/3/" /><xhtml:link rel="alternate" hreflang="en" href="https://amazy-apart.ru/en/apartment/3/" /><xhtml:link rel="alternate" hreflang="zh" href="https://amazy-apart.ru/zh/apartment/3/" /><xhtml:link rel="alternate" hreflang="x-default" href="https://amazy-apart.ru/apartment/3/" /></url></urlset>

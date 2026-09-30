@@ -1,3 +1,5 @@
+import { MaxContact } from '@/components/MaxContact';
+import { SITE, trackGoal } from '@/lib/site';
 import { useState, useEffect } from "react";
 import { MessageCircle, Phone, Mail, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,25 +23,25 @@ export const ContactButton = () => {
     {
       icon: Phone,
       label: t('contactButton.callUs'),
-      href: 'tel:+79955085808',
+      href: `tel:${SITE.phone}`,
       color: 'text-blue-500',
     },
     {
       icon: MessageCircle,
       label: t('contactButton.whatsapp'),
-      href: 'https://wa.me/79955085808',
+      href: SITE.whatsapp,
       color: 'text-green-500',
     },
     {
       icon: MessageCircle,
       label: t('contactButton.telegram'),
-      href: 'https://t.me/Volshebno_tyt',
+      href: SITE.telegram,
       color: 'text-blue-400',
     },
     {
       icon: Mail,
       label: t('contactButton.writeEmail'),
-      href: 'mailto:info@volshebno-tut.ru',
+      href: `mailto:${SITE.email}`,
       color: 'text-red-500',
     },
   ];
@@ -77,7 +79,8 @@ export const ContactButton = () => {
                       <a
                         key={index}
                         href={contact.href}
-                        target="_blank"
+                        onClick={() => { if (contact.href.startsWith('tel:')) trackGoal('phone_click'); else if (contact.href === SITE.telegram) trackGoal('telegram_click'); else if (contact.href === SITE.whatsapp) trackGoal('whatsapp_click'); }}
+                        target={contact.href.startsWith('https:') ? '_blank' : undefined}
                         rel="noopener noreferrer"
                         className="flex items-center gap-3 p-3 rounded-md hover:bg-accent transition-colors group"
                       >
@@ -88,6 +91,7 @@ export const ContactButton = () => {
                       </a>
                     );
                   })}
+                  <MaxContact className="w-full rounded-md p-3 text-sm hover:bg-accent" />
                 </div>
               </motion.div>
             )}
@@ -108,13 +112,13 @@ export const ContactButton = () => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ delay: 0.5, duration: 0.3 }}
-                className="hidden md:block bg-gradient-to-r from-green-400 via-green-500 to-emerald-600 
+                className="hidden md:block bg-gradient-to-r from-green-400 via-green-500 to-emerald-600
                   text-white px-4 py-2 rounded-lg shadow-lg whitespace-nowrap font-medium"
               >
                 {t('contactButton.title')}!
               </motion.div>
             )}
-            
+
             <motion.button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               whileHover={{ scale: 1.1 }}
@@ -130,16 +134,16 @@ export const ContactButton = () => {
                   ease: "easeInOut"
                 }
               }}
-              className="relative rounded-full h-16 w-16 md:h-20 md:w-20 
+              className="relative rounded-full h-16 w-16 md:h-16 md:w-16
                 bg-gradient-to-r from-green-400 via-green-500 to-emerald-600
                 shadow-2xl hover:shadow-green-500/50
-                transition-all duration-300 
+                transition-all duration-300
                 flex items-center justify-center
-                before:absolute before:inset-0 before:rounded-full 
-                before:bg-green-400/50 before:animate-ping"
+                before:absolute before:inset-0 before:rounded-full
+                before:bg-green-400/50"
               aria-label={t('contactButton.title')}
             >
-              <MessageCircle className="w-8 h-8 md:w-10 md:h-10 text-white relative z-10" />
+              <MessageCircle className="w-7 h-7 md:w-8 md:h-8 text-white relative z-10" />
             </motion.button>
           </motion.div>
         </>

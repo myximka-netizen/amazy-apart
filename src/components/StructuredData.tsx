@@ -1,3 +1,4 @@
+import { SITE } from '@/lib/site';
 import { useEffect, useRef } from "react";
 
 interface StructuredDataProps {
@@ -26,78 +27,19 @@ export function StructuredData({ data }: StructuredDataProps) {
 
 export function generateOrganizationData() {
   return {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "Волшебно тут",
-    "url": "https://amazy-apart.ru",
-    "logo": "https://amazy-apart.ru/logo.png",
-    "contactPoint": {
-      "@type": "ContactPoint",
-      "telephone": "+7-995-508-58-08",
-      "contactType": "customer service",
-      "availableLanguage": ["Russian", "English", "Chinese"]
-    },
-    "sameAs": [
-      "https://wa.me/79955085808",
-      "https://t.me/Volshebno_tyt"
-    ]
+    '@context': 'https://schema.org', '@type': 'Organization',
+    '@id': `${SITE.origin}/#organization`, name: 'Волшебно тут', alternateName: 'Amazy Apart',
+    url: `${SITE.origin}/`, logo: SITE.logo,
+    telephone: SITE.phone, email: SITE.email,
+    contactPoint: { '@type': 'ContactPoint', telephone: SITE.phone, contactType: 'customer service', availableLanguage: ['Russian', 'English', 'Chinese'] },
+    sameAs: [SITE.telegram, SITE.whatsapp, ...(SITE.maxProfileUrl ? [SITE.maxProfileUrl] : [])],
   };
 }
-
 export function generateWebSiteData() {
-  return {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "Волшебно тут",
-    "url": "https://amazy-apart.ru",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": "https://amazy-apart.ru/apartments?search={search_term_string}",
-      "query-input": "required name=search_term_string"
-    }
-  };
+  return { '@context': 'https://schema.org', '@type': 'WebSite', '@id': `${SITE.origin}/#website`, name: 'Волшебно тут', alternateName: 'Amazy Apart', url: `${SITE.origin}/`, publisher: { '@id': `${SITE.origin}/#organization` } };
 }
-
 export function generateLocalBusinessData() {
-  return {
-    "@context": "https://schema.org",
-    "@type": "LodgingBusiness",
-    "name": "Волшебно тут",
-    "image": "https://amazy-apart.ru/hero-image.jpg",
-    "@id": "https://amazy-apart.ru",
-    "url": "https://amazy-apart.ru",
-    "telephone": "+7-995-508-58-08",
-    "priceRange": "5500₽ - 12000₽",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Moscow",
-      "addressCountry": "RU"
-    },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": "55.7558",
-      "longitude": "37.6176"
-    },
-    "openingHoursSpecification": {
-      "@type": "OpeningHoursSpecification",
-      "dayOfWeek": [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday"
-      ],
-      "opens": "00:00",
-      "closes": "23:59"
-    },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "reviewCount": "2500"
-    }
-  };
+  return { ...generateOrganizationData(), '@type': 'LodgingBusiness', '@id': `${SITE.origin}/#lodging`, image: SITE.socialImage, address: { '@type': 'PostalAddress', addressLocality: 'Москва', addressCountry: 'RU' } };
 }
 
 export function generateApartmentData(apartment: {
@@ -121,12 +63,7 @@ export function generateApartmentData(apartment: {
       "price": apartment.price,
       "priceCurrency": "RUB",
       "availability": "https://schema.org/InStock",
-      "url": `https://amazy-apart.ru/apartments/${apartment.id}`
-    },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": apartment.rating,
-      "reviewCount": "150"
+      "url": `https://amazy-apart.ru/apartment/${apartment.id}/`
     },
     "address": {
       "@type": "PostalAddress",
@@ -174,7 +111,7 @@ export function generateArticleData(article: {
       "name": "Волшебно тут",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://amazy-apart.ru/logo.png"
+        "url": SITE.logo
       }
     }
   };

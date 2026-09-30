@@ -1,3 +1,6 @@
+import { SITE, siteUrl } from '@/lib/site';
+import { SEO } from '@/components/SEO';
+import NotFound from './NotFound';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/Header';
@@ -11,7 +14,7 @@ import apartment3 from '@/assets/apartment-3.jpg';
 
 const ApartmentDetail = () => {
   const { id } = useParams();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const apartmentData: any = {
     '1': {
@@ -45,6 +48,8 @@ const ApartmentDetail = () => {
 
   const apartment = apartmentData[id || '1'];
 
+  if (!apartment) return <NotFound />;
+
   const amenities = [
     { icon: Wifi, label: 'Wi-Fi' },
     { icon: Tv, label: t('amenities.tv') },
@@ -56,9 +61,10 @@ const ApartmentDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO title={apartment.title} description={`${apartment.title}. ${apartment.address}. ${t('upgrade.directNote')}`} ogImage={new URL(apartment.images[0], SITE.origin).href} ogImageAlt={apartment.title} structuredData={[{ '@context': 'https://schema.org', '@type': 'Apartment', name: apartment.title, image: new URL(apartment.images[0], SITE.origin).href, url: siteUrl(`/apartment/${id}/`, i18n.language), numberOfRooms: apartment.rooms }]} />
       <Header />
 
-      <div className="container mx-auto px-4 py-8">
+      <div id="main-content" className="container mx-auto px-4 py-8">
         <div className="mb-8 animate-fade-in">
           <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
             {apartment.title}

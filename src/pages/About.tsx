@@ -46,18 +46,18 @@ const About = () => {
             description: t('about.seo.description'),
             datePublished: "2020-01-01",
             dateModified: "2025-10-03",
-            image: "https://homereserve.ru/about-image.jpg"
+            image: "https://amazy-apart.ru/og-image.jpg"
           }),
           generateBreadcrumbData([
-            { name: "Главная", url: "https://homereserve.ru/" },
-            { name: "О нас", url: "https://homereserve.ru/about" }
+            { name: "Главная", url: "https://amazy-apart.ru/" },
+            { name: "О нас", url: "https://amazy-apart.ru/about" }
           ])
         ]}
       />
       <Header />
 
       {/* Hero Section */}
-      <section className="bg-gradient-hero py-20">
+      <section id="main-content" className="bg-gradient-hero py-12 md:py-16">
         <div className="container mx-auto px-4">
           <Breadcrumbs items={[{ label: t('about.title') }]} />
         </div>

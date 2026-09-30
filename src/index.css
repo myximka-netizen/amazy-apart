@@ -17,7 +17,7 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 20 14% 4%;
 
-    --primary: 24 87% 67%;
+    --primary: 24 65% 37%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 60 9% 98%;
@@ -34,7 +34,7 @@ All colors MUST be HSL.
 
     --border: 20 6% 90%;
     --input: 20 6% 90%;
-    --ring: 24 87% 67%;
+    --ring: 24 65% 37%;
 
     --radius: 0.75rem;
 
@@ -161,4 +161,14 @@ All colors MUST be HSL.
   .animation-delay-500 {
     animation-delay: 0.5s;
   }
+}
+
+/* Readable controls and predictable mobile layout. */
+body { min-width: 320px; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 3px; }
+#main-content { scroll-margin-top: 6rem; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }

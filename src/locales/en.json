@@ -1,5 +1,5 @@
 {
-  "companyName": "Volshebno Tut",
+  "companyName": "Волшебно тут | Amazy Apart",
   "navigation": {
     "home": "Home",
     "apartments": "Apartments",
@@ -9,9 +9,9 @@
     "offers": "Special Offers"
   },
   "hero": {
-    "title": "Modern Apartments",
-    "subtitle": "for your comfort",
-    "description": "Discover a world of comfort and style in our carefully selected apartments. Honest photos, transparent prices, 24/7 support.",
+    "title": "Short-stay apartments in Moscow",
+    "subtitle": "",
+    "description": "Choose your dates, see the total price and talk directly to our team.",
     "findApartments": "Find Apartments"
   },
   "homepage": {
@@ -105,9 +105,34 @@
     "description": "Real impressions from people who have already stayed in our apartments"
   },
   "contact": {
-    "phone": "Phone",
+    "title": "Contact Us",
+    "description": "Get in touch with us in any convenient way. We are always available and ready to help you.",
+    "phoneTitle": "Phone",
+    "phoneDescription": "Call us from 8:00 AM to 11:00 PM, our managers are always ready to help",
+    "emailTitle": "Email",
+    "emailDescription": "Write to us via email and we'll respond within an hour",
+    "messengersTitle": "Messengers",
+    "telegram": "Telegram",
+    "whatsapp": "WhatsApp",
+    "messengersDescription": "Quick communication through popular messengers",
+    "supportTitle": "Support",
+    "supportDescription": "24/7 support for our guests",
+    "formTitle": "Write to us",
+    "formDescription": "Fill out the form and we'll contact you shortly",
+    "name": "Name",
     "email": "Email",
-    "workingHours": "Open daily from 9:00 AM to 9:00 PM"
+    "phone": "Phone",
+    "subject": "Subject",
+    "yourMessage": "Your message",
+    "send": "Send",
+    "messageSent": "Message sent!",
+    "willContact": "We'll contact you shortly",
+    "locationTitle": "Our Location",
+    "locationDescription": "Our office is located in the center of Moscow",
+    "mapPlaceholder": "Office map",
+    "needHelpNow": "Need help right now?",
+    "quickContactDescription": "Contact us in a convenient way and get a quick response",
+    "call": "Call"
   },
   "featuredApartments": {
     "title": "Featured Apartments",
@@ -236,36 +261,6 @@
         "Transparent pricing"
       ]
     }
-  },
-  "contact": {
-    "title": "Contact Us",
-    "description": "Get in touch with us in any convenient way. We are always available and ready to help you.",
-    "phoneTitle": "Phone",
-    "phoneDescription": "Call us from 8:00 AM to 11:00 PM, our managers are always ready to help",
-    "emailTitle": "Email",
-    "emailDescription": "Write to us via email and we'll respond within an hour",
-    "messengersTitle": "Messengers",
-    "telegram": "Telegram",
-    "whatsapp": "WhatsApp",
-    "messengersDescription": "Quick communication through popular messengers",
-    "supportTitle": "Support",
-    "supportDescription": "24/7 support for our guests",
-    "formTitle": "Write to us",
-    "formDescription": "Fill out the form and we'll contact you shortly",
-    "name": "Name",
-    "email": "Email",
-    "phone": "Phone",
-    "subject": "Subject",
-    "yourMessage": "Your message",
-    "send": "Send",
-    "messageSent": "Message sent!",
-    "willContact": "We'll contact you shortly",
-    "locationTitle": "Our Location",
-    "locationDescription": "Our office is located in the center of Moscow",
-    "mapPlaceholder": "Office map",
-    "needHelpNow": "Need help right now?",
-    "quickContactDescription": "Contact us in a convenient way and get a quick response",
-    "call": "Call"
   },
   "contacts": {
     "subtitle": "Contact us in a convenient way",
@@ -460,5 +455,168 @@
     "writeEmail": "Write Email",
     "telegram": "Telegram",
     "whatsapp": "WhatsApp"
+  },
+  "upgrade": {
+    "moscow": "Moscow",
+    "skip": "Skip to content",
+    "menu": "Menu",
+    "closeMenu": "Close menu",
+    "book": "Choose dates",
+    "businessNav": "Business stays",
+    "longNav": "Long stays",
+    "direct": "Book directly with us",
+    "directText": "Choose your dates, see the total price and talk directly to our team.",
+    "promoTitle": "5% off your first booking",
+    "promoText": "Enter Online5 at checkout.",
+    "promoNote": "For first-time guests. Check the promo code discount and total price before payment.",
+    "offerTerms": "All offers and terms",
+    "searchLoading": "Loading available apartments…",
+    "searchError": "Online search is unavailable right now. Message us to check dates and prices.",
+    "searchRetry": "Try again",
+    "contactFallback": "Get help on Telegram",
+    "catalogTitle": "Short-stay apartments in Moscow",
+    "catalogIntro": "Check available dates and prices in the catalogue. Need business documents or a stay of several weeks? We can help with the arrangements.",
+    "locationsTitle": "Choose a convenient location",
+    "locationsIntro": "Dinamo, Leningradsky Prospekt and Tsarskaya Ploshchad — start with the area that suits your trip.",
+    "details": "Find out more",
+    "allApartments": "Check available apartments",
+    "locationHint": "The catalogue below shows all available options. Check each apartment’s location in its listing.",
+    "map": "View the area on Yandex Maps",
+    "mapTitle": "Apartment locations",
+    "mapDescription": "Choose an area. Confirm the exact address and directions for your apartment before arrival.",
+    "plansTitle": "For business and longer stays",
+    "businessCard": "Business and corporate stays",
+    "businessCardText": "Expense documents, payment arrangements and help accommodating your team.",
+    "longCard": "A week, two weeks or a month",
+    "longCardText": "Find an apartment and request a quote for your whole stay.",
+    "businessTitle": "Business travel apartments in Moscow",
+    "businessIntro": "Stays of 3–30 days and longer. Share your dates, team size and accounting requirements to request a tailored quote.",
+    "businessCta": "Request a corporate rate",
+    "businessPoints": [
+      {
+        "title": "Expense documents",
+        "text": "Tell us which documents your accounting team needs so we can agree the paperwork before booking."
+      },
+      {
+        "title": "Payment arrangements",
+        "text": "Discuss bank transfer and company billing details with our team before booking."
+      },
+      {
+        "title": "Help with accommodation",
+        "text": "Share your team size, bed requirements and preferred area. Regular corporate guests can arrange a personal manager."
+      },
+      {
+        "title": "Arrival arrangements",
+        "text": "Agree the check-in time and method in advance. For late arrivals, confirm how to collect the keys."
+      }
+    ],
+    "businessSteps": [
+      "Arrival and departure dates and number of guests.",
+      "Work address or preferred area and apartment requirements.",
+      "Company name, payment method and documents needed."
+    ],
+    "requestTitle": "What to include in your request",
+    "businessDraft": "Hello! I would like a corporate rate. Dates: __. Guests: __. Location: __. Company and documents: __.",
+    "longTitle": "Moscow apartments for a week or longer",
+    "longIntro": "For an extended business trip, relocation or a longer visit. Choose your stay length and request a total quote.",
+    "longCta": "Request a long-stay quote",
+    "longDraft": "Hello! I need an apartment for a longer stay. Length: __. Dates: __. Guests: __. Requirements: __.",
+    "longPlans": [
+      {
+        "title": "5 nights",
+        "text": "A short working week. We will check availability and prices for your dates."
+      },
+      {
+        "title": "7+ nights",
+        "text": "5% off stays of 7 nights or more. Check the total price for your dates."
+      },
+      {
+        "title": "14+ nights",
+        "text": "10% off stays of 14 nights or more. Check the total price for your dates."
+      },
+      {
+        "title": "30+ nights",
+        "text": "Request a personalised quote and agree the terms for your entire stay."
+      }
+    ],
+    "longService": "For longer stays, discuss cleaning and linen changes, guest numbers and extensions. Confirm the total price, eligible discounts and cancellation terms before payment.",
+    "locations": [
+      {
+        "slug": "dinamo",
+        "title": "Apartments near Dinamo metro",
+        "intro": "Short stays in Moscow with Dinamo metro as your location reference.",
+        "body": "Compare the exact address and walking route to the station when choosing an apartment. Share your dates, guest numbers and preferred travel time so we can help find an option. For business trips, discuss expense documents in advance; for several weeks, request a total quote.",
+        "query": "Москва метро Динамо"
+      },
+      {
+        "slug": "leningradskiy-prospekt",
+        "title": "Apartments on Leningradsky Prospekt",
+        "intro": "Apartment enquiries for business trips and longer stays.",
+        "body": "Leningradsky Prospekt is a long street, so use a specific building or destination address when choosing. Tell us where you will work or spend time, your dates and guest numbers. Compare the location, beds and total price, and check business document requirements in advance.",
+        "query": "Москва Ленинградский проспект"
+      },
+      {
+        "slug": "carskaya-ploshad",
+        "title": "Apartments in Tsarskaya Ploshchad",
+        "intro": "Moscow stays with the Tsarskaya Ploshchad residential complex as your location reference.",
+        "body": "Confirm the building, entrance and check-in arrangements when choosing your apartment. Include dates, guest numbers and bed requirements in your enquiry. For late arrivals or stays of several weeks, discuss keys, cleaning and extensions before booking. Our team will confirm the exact apartment address.",
+        "query": "Москва ЖК Царская площадь"
+      }
+    ],
+    "contactTitle": "Contact Amazy Apart",
+    "contactIntro": "We can help find an apartment, check dates and agree your stay arrangements.",
+    "formTitle": "Prepare your message",
+    "formIntro": "Add the details to open a WhatsApp draft. You will need to send it in WhatsApp.",
+    "topic": "Enquiry topic",
+    "message": "Your question or requirements",
+    "name": "Your name",
+    "draftButton": "Continue in WhatsApp",
+    "draftNotice": "Your message has not been sent yet. Send it in WhatsApp. If the app did not open, use the link below.",
+    "openDraft": "Open your draft message",
+    "copy": "Copy phone number",
+    "copied": "Phone number copied",
+    "copyFailed": "Could not copy. Please select the number manually.",
+    "phoneLabel": "Phone",
+    "emailLabel": "Email",
+    "supportLabel": "Guest support",
+    "directNote": "Book directly with the Volshebno Tut | Amazy Apart team.",
+    "conditionsTitle": "Before you book",
+    "conditions": [
+      "Check the total price for your dates, including any discount.",
+      "Confirm the deposit, cancellation terms and check-in and check-out times.",
+      "Let us know in advance if you need expense documents or late check-in."
+    ],
+    "seo": {
+      "homeTitle": "Short-stay apartments in Moscow",
+      "homeDescription": "Book Volshebno Tut apartments directly on the official website. Best price guarantee and special direct booking offers.",
+      "catalogDescription": "Moscow apartment catalogue: available dates, current prices and direct bookings. Enquire about Dinamo, Leningradsky Prospekt and Tsarskaya Ploshchad.",
+      "offersTitle": "Direct booking discounts and special offers",
+      "offersDescription": "Amazy Apart offers: Online5 for your first booking and discounts for longer stays.",
+      "ownersTitle": "Apartment management in Moscow",
+      "ownersDescription": "Short-stay apartment management in Moscow: property preparation, guest accommodation and maintenance."
+    }
+  },
+  "guarantee": {
+    "title": "Best price guarantee",
+    "hero": "Get more from booking direct. Best price guarantee.",
+    "terms": "If an aggregator offers a lower price for the same apartment, dates and booking conditions, we will match or beat it.",
+    "cta": "Check prices and book",
+    "why": "Why book directly with us",
+    "discountTitle": "Website discounts and promo codes",
+    "discountText": "Save 5% on your first booking with Online5. Check the final price and offer conditions before payment.",
+    "contactTitle": "Talk directly to our team",
+    "contactText": "Discuss your dates, arrival and preferences with us directly.",
+    "claim": "Found a lower price?",
+    "claimText": "Send a link or screenshot showing the dates, guests, payment and cancellation conditions. We will compare the total price for the same apartment.",
+    "claimCta": "Send an offer to compare",
+    "claimDraft": "Hello! I would like to use the best price guarantee. Apartment: … Dates: … Guests: … Total price and payment/cancellation conditions: … Offer link: …"
+  },
+  "max": {
+    "write": "Message us on MAX",
+    "contact": "Our MAX contact",
+    "description": "Copy our MAX phone number to search for our contact in the app. If you cannot find it, call us or contact us on Telegram.",
+    "copy": "Copy number",
+    "copied": "Number copied",
+    "failed": "Could not copy. Select and copy the number manually."
   }
 }
