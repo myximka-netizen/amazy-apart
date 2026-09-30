@@ -1,3 +1,4 @@
+import { whatsappDraft, trackGoal } from '@/lib/site';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 const BookingForm = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [draft, setDraft] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -24,20 +26,11 @@ const BookingForm = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    toast({
-      title: t('booking.successTitle'),
-      description: t('booking.successMessage'),
-    });
-
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      checkIn: '',
-      checkOut: '',
-      guests: '',
-      message: ''
-    });
+    if (formData.checkOut <= formData.checkIn) return;
+    const url = whatsappDraft(`${t('booking.title')}\n${window.location.href.split('?')[0]}\n${t('booking.name')}: ${formData.name}\nEmail: ${formData.email}\n${t('booking.phone')}: ${formData.phone}\n${t('booking.checkIn')}: ${formData.checkIn}\n${t('booking.checkOut')}: ${formData.checkOut}\n${t('booking.guests')}: ${formData.guests}\n${formData.message}`);
+    setDraft(url);
+    trackGoal('contact_draft');
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -55,6 +48,7 @@ const BookingForm = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <p className="mb-4 text-sm text-muted-foreground">{t('upgrade.formIntro')}</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">{t('booking.name')}</Label>
@@ -117,6 +111,7 @@ const BookingForm = () => {
               </Label>
               <Input
                 id="checkOut"
+                min={formData.checkIn ? new Date(new Date(`${formData.checkIn}T00:00:00Z`).getTime() + 86400000).toISOString().slice(0, 10) : undefined}
                 name="checkOut"
                 type="date"
                 value={formData.checkOut}
@@ -159,9 +154,10 @@ const BookingForm = () => {
           </div>
 
           <Button type="submit" className="w-full" size="lg">
-            {t('booking.submit')}
+            {t('upgrade.draftButton')}
           </Button>
         </form>
+        {draft && <div role="status" className="mt-4 text-sm"><p>{t('upgrade.draftNotice')}</p><a href={draft} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block underline">{t('upgrade.openDraft')}</a></div>}
       </CardContent>
     </Card>
   );

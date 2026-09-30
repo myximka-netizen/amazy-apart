@@ -15,11 +15,13 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  ssr: { noExternal: ['react-helmet-async'] },
   assetsInclude: ["**/*.avifs"],
   
   // Настройки для правильного деплоя
   build: {
     outDir: 'dist',
+    manifest: true,
     sourcemap: false,
     rollupOptions: {
       output: {

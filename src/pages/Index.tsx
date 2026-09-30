@@ -1,3 +1,7 @@
+import { MaxContact } from '@/components/MaxContact';
+import { DirectBooking } from '@/components/DirectBooking';
+import { LocationLinks } from '@/components/LocationLinks';
+import { SITE, trackGoal } from '@/lib/site';
 import { Link } from "react-router-dom";
 import { ArrowRight, Shield, Clock, Star, MapPin, Users, Award, Trophy, Wifi, Monitor, Sparkles, X, Phone, MessageCircle } from "lucide-react";
 import guestsChoiceAward from "@/assets/guests-choice-award.png";
@@ -35,42 +39,6 @@ import certificateSilver2024 from "@/assets/certificate-silver-2024.jpg";
 
 const Index = () => {
   const { t } = useTranslation();
-  const featuredApartments = [
-    {
-      id: "1",
-      title: "Роскошные апартаменты в центре",
-      image: apartment1,
-      price: 8500,
-      location: "Тверская, 15",
-      guests: 4,
-      rating: 4.9,
-      amenities: ["WiFi", "Парковка", "Кофе"],
-      description: "Элегантные апартаменты с панорамным видом на город в самом сердце Москвы."
-    },
-    {
-      id: "2",
-      title: "Современная студия с кухней",
-      image: apartment2,
-      price: 5500,
-      location: "Арбат, 8",
-      guests: 2,
-      rating: 4.8,
-      amenities: ["WiFi", "Кофе"],
-      description: "Уютная студия с полностью оборудованной кухней и стильным интерьером."
-    },
-    {
-      id: "3",
-      title: "Просторная квартира для семьи",
-      image: apartment3,
-      price: 12000,
-      location: "Патриаршие пруды, 3",
-      guests: 6,
-      rating: 5.0,
-      amenities: ["WiFi", "Парковка", "Кофе"],
-      description: "Просторная трехкомнатная квартира идеально подходит для семейного отдыха."
-    }
-  ];
-
   const reviews = [
     {
       name: "Анна Петрова",
@@ -101,10 +69,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="Премиальные апартаменты для краткосрочной аренды в Москве"
-        description="Снимайте современные апартаменты в центре Москвы посуточно. Честные фотографии, прозрачные цены от 5500₽, круглосуточная поддержка. Рейтинг 4.9/5, более 2500 довольных гостей."
+        title={t('upgrade.seo.homeTitle')}
+        description={t('upgrade.seo.homeDescription')}
         keywords="аренда квартир москва, апартаменты посуточно, снять квартиру на сутки москва, краткосрочная аренда, жилье в центре москвы"
         structuredData={[
+          generateOrganizationData(),
           generateWebSiteData(),
           generateLocalBusinessData(),
           generateBreadcrumbData([
@@ -116,8 +85,8 @@ const Index = () => {
 
       {/* Hero Section with Booking */}
       <motion.section
-        className="relative min-h-[80vh] flex items-center justify-center overflow-hidden"
-        initial={{ opacity: 0 }}
+        id="main-content" className="relative min-h-[660px] py-12 md:py-16 flex items-center justify-center overflow-hidden"
+        initial={false}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
@@ -133,50 +102,52 @@ const Index = () => {
           <div className="max-w-6xl mx-auto text-center">
             <motion.div
               className="text-white mb-12"
-              initial={{ opacity: 0, y: 50 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
             >
-              <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-8">
+              <Link to="/offers/" className="mb-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-foreground"><Shield className="h-4 w-4 text-primary" />{t('guarantee.title')}</Link>
+              <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold leading-tight mb-6">
                 {t('hero.title')}
-                <span className="block text-luxury">{t('hero.subtitle')}</span>
+
               </h1>
               <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-                {t('hero.description')}
+                {t('guarantee.hero')}
               </p>
+              <p className="mx-auto mt-4 max-w-3xl text-sm leading-relaxed text-white/90">{t('guarantee.terms')}</p>
             </motion.div>
 
             {/* Integrated Search Widget */}
             <motion.div
-              initial={{ opacity: 0, y: 50 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
             >
-              <SearchWidget className="bg-transparent rounded-2xl p-8 max-w-4xl mx-auto" />
+              <SearchWidget className="rounded-2xl bg-white/95 text-foreground p-5 md:p-6 max-w-4xl mx-auto" />
             </motion.div>
 
             {/* Quick Contact Section */}
             <motion.div
               className="mt-12 flex flex-col sm:flex-row justify-center items-center gap-6 text-white"
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.7, ease: "easeOut" }}
             >
               <div className="flex items-center space-x-2">
                 <Phone className="h-5 w-5 text-luxury" />
                 <a
-                  href="tel:+79955085808"
+                  href={`tel:${SITE.phone}`} onClick={() => trackGoal('phone_click')}
                   className="text-lg font-medium hover:text-luxury transition-colors"
                 >
-                  +7 995 508 58 08
+                  {SITE.displayPhone}
                 </a>
               </div>
 
               <div className="hidden sm:block w-px h-8 bg-white/30"></div>
 
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-wrap justify-center items-center gap-4">
                 <a
-                  href="https://wa.me/79955085808"
+                  href={SITE.whatsapp} onClick={() => trackGoal('whatsapp_click')}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center space-x-2 hover:text-luxury transition-colors"
@@ -186,7 +157,7 @@ const Index = () => {
                 </a>
 
                 <a
-                  href="https://t.me/Volshebno_tyt"
+                  href={SITE.telegram} onClick={() => trackGoal('telegram_click')}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center space-x-2 hover:text-luxury transition-colors"
@@ -194,27 +165,36 @@ const Index = () => {
                   <MessageCircle className="h-5 w-5 text-blue-400" />
                   <span>Telegram</span>
                 </a>
+                <MaxContact className="hover:text-luxury transition-colors" />
               </div>
             </motion.div>
           </div>
         </div>
       </motion.section>
 
+      <section className="container mx-auto px-4 pt-10"><DirectBooking /></section>
+      <LocationLinks />
+      <section className="container mx-auto px-4 pb-12">
+        <h2 className="mb-6 text-3xl font-bold">{t('upgrade.plansTitle')}</h2>
+        <div className="grid gap-5 md:grid-cols-2">
+          {[{ path: '/business-travel/', title: 'businessCard', text: 'businessCardText' }, { path: '/long-stay/', title: 'longCard', text: 'longCardText' }].map(item => <Link key={item.path} to={item.path} className="rounded-2xl border bg-surface p-6 md:p-8 hover:border-primary"><h3 className="text-2xl font-semibold">{t(`upgrade.${item.title}`)}</h3><p className="my-3 text-muted-foreground">{t(`upgrade.${item.text}`)}</p><span className="inline-flex items-center gap-2 font-semibold text-primary">{t('upgrade.details')}<ArrowRight size={18} /></span></Link>)}
+        </div>
+      </section>
       {/* Ratings & Awards Section */}
       <motion.section
         className="py-12 bg-gradient-to-r from-primary/5 to-luxury/5"
-        initial={{ opacity: 0, y: 50 }}
+        initial={false}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: false }}
+        viewport={{ once: true }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <motion.div
               className="text-center mb-8"
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false }}
+              viewport={{ once: true }}
               transition={{ duration: 0.6, ease: "easeOut" }}
             >
               <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
@@ -228,9 +208,9 @@ const Index = () => {
             {/* Awards and Certificates Carousel */}
             <motion.div
               className="flex justify-center"
-              initial={{ opacity: 0, y: 50 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false }}
+              viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
             >
               <Carousel className="w-full max-w-5xl">
@@ -518,7 +498,7 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <motion.div
               className="text-center space-y-4 group"
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -534,7 +514,7 @@ const Index = () => {
 
             <motion.div
               className="text-center space-y-4 group"
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -550,7 +530,7 @@ const Index = () => {
 
             <motion.div
               className="text-center space-y-4 group"
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.5, delay: 0.3 }}
@@ -566,7 +546,7 @@ const Index = () => {
 
             <motion.div
               className="text-center space-y-4 group"
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.5, delay: 0.4 }}
@@ -582,7 +562,7 @@ const Index = () => {
 
             <motion.div
               className="text-center space-y-4 group"
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.5, delay: 0.5 }}
@@ -598,7 +578,7 @@ const Index = () => {
 
             <motion.div
               className="text-center space-y-4 group"
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.5, delay: 0.6 }}
@@ -618,17 +598,17 @@ const Index = () => {
       {/* Our Services Section */}
       <motion.section
         className="py-20 bg-background"
-        initial={{ opacity: 0, y: 50 }}
+        initial={false}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: false }}
+        viewport={{ once: true }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
         <div className="container mx-auto px-4">
           <motion.div
             className="text-center mb-16"
-            initial={{ opacity: 0, y: 30 }}
+            initial={false}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false }}
+            viewport={{ once: true }}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
@@ -643,9 +623,9 @@ const Index = () => {
             {/* Corporate Services */}
             <motion.div
               className="bg-gradient-to-br from-surface to-surface/50 rounded-3xl p-8 shadow-card hover:shadow-floating transition-all duration-300 border border-border/50"
-              initial={{ opacity: 0, x: -50 }}
+              initial={false}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: false }}
+              viewport={{ once: true }}
               transition={{ duration: 0.8, ease: "easeOut" }}
               whileHover={{ scale: 1.02 }}
             >
@@ -685,9 +665,9 @@ const Index = () => {
             {/* Long-term Cleaning */}
             <motion.div
               className="bg-gradient-to-br from-surface to-surface/50 rounded-3xl p-8 shadow-card hover:shadow-floating transition-all duration-300 border border-border/50"
-              initial={{ opacity: 0, x: 50 }}
+              initial={false}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: false }}
+              viewport={{ once: true }}
               transition={{ duration: 0.8, ease: "easeOut" }}
               whileHover={{ scale: 1.02 }}
             >
@@ -730,17 +710,17 @@ const Index = () => {
       {/* Reviews */}
       <motion.section
         className="py-16"
-        initial={{ opacity: 0, y: 50 }}
+        initial={false}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: false }}
+        viewport={{ once: true }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
         <div className="container mx-auto px-4">
           <motion.div
             className="text-center space-y-4 mb-12"
-            initial={{ opacity: 0, y: 30 }}
+            initial={false}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false }}
+            viewport={{ once: true }}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
             <h2 className="text-3xl md:text-4xl font-bold text-foreground">
@@ -752,9 +732,9 @@ const Index = () => {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={false}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false }}
+            viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
           >
             <ReviewsCarousel reviews={reviews} />

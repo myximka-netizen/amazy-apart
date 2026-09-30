@@ -1,5 +1,5 @@
 {
-  "companyName": "Volshebno Tut",
+  "companyName": "Волшебно тут | Amazy Apart",
   "navigation": {
     "home": "首页",
     "apartments": "公寓",
@@ -9,9 +9,9 @@
     "offers": "特别优惠"
   },
   "hero": {
-    "title": "现代公寓",
-    "subtitle": "为您的舒适而设",
-    "description": "在我们精心挑选的公寓中发现舒适和风格的世界。真实照片，透明价格，24/7支持。",
+    "title": "莫斯科短租公寓",
+    "subtitle": "",
+    "description": "选择日期、查看总价，并直接与我们的团队联系。",
     "findApartments": "寻找公寓"
   },
   "homepage": {
@@ -105,9 +105,34 @@
     "description": "已入住我们公寓的客人的真实体验"
   },
   "contact": {
-    "phone": "电话",
+    "title": "联系我们",
+    "description": "以任何方便的方式与我们联系。我们随时在线，随时准备帮助您。",
+    "phoneTitle": "电话",
+    "phoneDescription": "请在8:00至23:00致电，我们的经理随时准备提供帮助",
+    "emailTitle": "电子邮件",
+    "emailDescription": "给我们发电子邮件，我们会在一小时内回复",
+    "messengersTitle": "即时通讯",
+    "telegram": "Telegram",
+    "whatsapp": "WhatsApp",
+    "messengersDescription": "通过热门即时通讯工具快速联系",
+    "supportTitle": "支持",
+    "supportDescription": "为我们的客人提供24/7支持",
+    "formTitle": "给我们留言",
+    "formDescription": "填写表格，我们会尽快与您联系",
+    "name": "姓名",
     "email": "电子邮件",
-    "workingHours": "每日营业时间：上午9:00至晚上9:00"
+    "phone": "电话",
+    "subject": "主题",
+    "yourMessage": "您的留言",
+    "send": "发送",
+    "messageSent": "消息已发送！",
+    "willContact": "我们会尽快与您联系",
+    "locationTitle": "我们的位置",
+    "locationDescription": "我们的办公室位于莫斯科市中心",
+    "mapPlaceholder": "办公室地图",
+    "needHelpNow": "现在需要帮助吗？",
+    "quickContactDescription": "以方便的方式联系我们，快速获得回复",
+    "call": "拨打电话"
   },
   "featuredApartments": {
     "title": "精选公寓",
@@ -236,36 +261,6 @@
         "透明定价"
       ]
     }
-  },
-  "contact": {
-    "title": "联系我们",
-    "description": "以任何方便的方式与我们联系。我们随时在线，随时准备帮助您。",
-    "phoneTitle": "电话",
-    "phoneDescription": "请在8:00至23:00致电，我们的经理随时准备提供帮助",
-    "emailTitle": "电子邮件",
-    "emailDescription": "给我们发电子邮件，我们会在一小时内回复",
-    "messengersTitle": "即时通讯",
-    "telegram": "Telegram",
-    "whatsapp": "WhatsApp",
-    "messengersDescription": "通过热门即时通讯工具快速联系",
-    "supportTitle": "支持",
-    "supportDescription": "为我们的客人提供24/7支持",
-    "formTitle": "给我们留言",
-    "formDescription": "填写表格，我们会尽快与您联系",
-    "name": "姓名",
-    "email": "电子邮件",
-    "phone": "电话",
-    "subject": "主题",
-    "yourMessage": "您的留言",
-    "send": "发送",
-    "messageSent": "消息已发送！",
-    "willContact": "我们会尽快与您联系",
-    "locationTitle": "我们的位置",
-    "locationDescription": "我们的办公室位于莫斯科市中心",
-    "mapPlaceholder": "办公室地图",
-    "needHelpNow": "现在需要帮助吗？",
-    "quickContactDescription": "以方便的方式联系我们，快速获得回复",
-    "call": "拨打电话"
   },
   "contacts": {
     "subtitle": "以方便的方式联系我们",
@@ -460,5 +455,168 @@
     "writeEmail": "发送邮件",
     "telegram": "Telegram",
     "whatsapp": "WhatsApp"
+  },
+  "upgrade": {
+    "moscow": "莫斯科",
+    "skip": "跳至正文",
+    "menu": "菜单",
+    "closeMenu": "关闭菜单",
+    "book": "选择日期",
+    "businessNav": "商务住宿",
+    "longNav": "长期住宿",
+    "direct": "直接向我们预订",
+    "directText": "选择日期、查看总价，并直接与我们的团队联系。",
+    "promoTitle": "首次预订优惠5%",
+    "promoText": "预订时输入优惠码 Online5。",
+    "promoNote": "首次入住客人优惠。付款前请核对优惠码折扣和最终金额。",
+    "offerTerms": "所有优惠及条件",
+    "searchLoading": "正在加载可订公寓…",
+    "searchError": "在线搜索暂时不可用。请联系我们查询日期和价格。",
+    "searchRetry": "重试",
+    "contactFallback": "通过 Telegram 咨询",
+    "catalogTitle": "莫斯科短租公寓",
+    "catalogIntro": "查看可订日期和价格。如需出差凭证或入住数周，我们可以帮助安排。",
+    "locationsTitle": "选择便利的位置",
+    "locationsIntro": "迪纳摩、列宁格勒大街和 Tsarskaya Ploshchad 住宅区——根据行程选择位置。",
+    "details": "了解详情",
+    "allApartments": "查询可订公寓",
+    "locationHint": "以下目录展示所有可订选项。请在具体公寓详情中核对位置。",
+    "map": "在 Yandex 地图中查看区域",
+    "mapTitle": "公寓位置",
+    "mapDescription": "选择感兴趣的区域。到达前请确认所选公寓的具体地址和路线。",
+    "plansTitle": "商务出行与长期住宿",
+    "businessCard": "商务及企业住宿",
+    "businessCardText": "出差凭证、付款安排以及员工住宿协助。",
+    "longCard": "一周、两周或一个月",
+    "longCardText": "选择公寓并查询整个住宿期间的总价。",
+    "businessTitle": "莫斯科商务出差公寓",
+    "businessIntro": "入住3至30天或更长时间。请告知日期、员工人数和财务要求，以获取住宿方案。",
+    "businessCta": "查询企业价格",
+    "businessPoints": [
+      {
+        "title": "出差凭证",
+        "text": "预订前请告知财务部门所需文件，以便提前确认。"
+      },
+      {
+        "title": "付款安排",
+        "text": "预订前请与团队确认银行转账和企业开票信息。"
+      },
+      {
+        "title": "住宿协助",
+        "text": "请告知人数、床位要求和期望位置。经常入住的企业客户可安排专属经理。"
+      },
+      {
+        "title": "入住安排",
+        "text": "提前确认入住时间和方式。晚到客人请确认钥匙领取方式。"
+      }
+    ],
+    "businessSteps": [
+      "入住和退房日期以及客人人数。",
+      "工作地址或期望区域以及公寓要求。",
+      "公司名称、付款方式和所需文件。"
+    ],
+    "requestTitle": "咨询时请提供",
+    "businessDraft": "您好！我想查询企业住宿价格。日期：__。人数：__。位置：__。公司及文件要求：__。",
+    "longTitle": "莫斯科一周及以上公寓住宿",
+    "longIntro": "适合延长出差、搬迁或长期旅行。选择入住时长并查询总价。",
+    "longCta": "查询长期住宿价格",
+    "longDraft": "您好！我需要长期住宿公寓。时长：__。日期：__。人数：__。要求：__。",
+    "longPlans": [
+      {
+        "title": "5晚",
+        "text": "适合短暂工作周。我们将查询日期对应的空房和价格。"
+      },
+      {
+        "title": "7晚及以上",
+        "text": "入住7晚及以上优惠5%。请核对所选日期的最终价格。"
+      },
+      {
+        "title": "14晚及以上",
+        "text": "入住14晚及以上优惠10%。请核对所选日期的最终价格。"
+      },
+      {
+        "title": "30晚及以上",
+        "text": "请查询个性化报价，并确认整个住宿期间的条件。"
+      }
+    ],
+    "longService": "长期住宿请提前确认清洁、床品更换、入住人数和续住安排。付款前请确认总价、优惠适用条件及取消条款。",
+    "locations": [
+      {
+        "slug": "dinamo",
+        "title": "迪纳摩地铁站附近公寓",
+        "intro": "以迪纳摩地铁站为位置参考的莫斯科短租住宿。",
+        "body": "选择公寓时请比较具体地址和前往地铁站的路线。告知日期、人数和期望通行时间，我们将协助选择。商务出行可提前确认出差凭证；入住数周可查询全程总价。",
+        "query": "Москва метро Динамо"
+      },
+      {
+        "slug": "leningradskiy-prospekt",
+        "title": "列宁格勒大街公寓",
+        "intro": "适合商务出行和长期住宿的公寓咨询。",
+        "body": "列宁格勒大街较长，请以具体楼号或目的地地址为参考。告知工作地点、日期及人数，并比较公寓位置、床位和总价。出差所需文件请提前确认。",
+        "query": "Москва Ленинградский проспект"
+      },
+      {
+        "slug": "carskaya-ploshad",
+        "title": "Tsarskaya Ploshchad 住宅区公寓",
+        "intro": "以 Tsarskaya Ploshchad 住宅区为位置参考的莫斯科住宿。",
+        "body": "选择公寓时请确认楼栋、入口和入住方式。咨询时注明日期、人数及床位需求。晚到或入住数周的客人请提前确认钥匙、清洁和续住安排。团队将提供所选公寓的准确地址。",
+        "query": "Москва ЖК Царская площадь"
+      }
+    ],
+    "contactTitle": "联系 Amazy Apart",
+    "contactIntro": "我们帮助选择公寓、查询日期并确认住宿条件。",
+    "formTitle": "准备咨询信息",
+    "formIntro": "填写详情后打开 WhatsApp 草稿。您需要在 WhatsApp 中确认发送。",
+    "topic": "咨询主题",
+    "message": "问题或住宿要求",
+    "name": "您的姓名",
+    "draftButton": "前往 WhatsApp",
+    "draftNotice": "信息尚未发送。请在 WhatsApp 中发送。如果应用未打开，请使用以下链接。",
+    "openDraft": "打开信息草稿",
+    "copy": "复制电话号码",
+    "copied": "电话号码已复制",
+    "copyFailed": "无法复制，请手动选取号码。",
+    "phoneLabel": "电话",
+    "emailLabel": "电子邮件",
+    "supportLabel": "客人支持",
+    "directNote": "直接向「Волшебно тут | Amazy Apart」团队预订。",
+    "conditionsTitle": "预订前请确认",
+    "conditions": [
+      "核对所选日期包含优惠的最终价格。",
+      "确认押金、取消条件和入住退房时间。",
+      "如需出差凭证或晚到入住，请提前告知。"
+    ],
+    "seo": {
+      "homeTitle": "莫斯科短租公寓",
+      "homeDescription": "通过「Волшебно тут」官方网站直接预订公寓，享受最优价格保证和直接预订专属优惠。",
+      "catalogDescription": "莫斯科公寓目录：可订日期、最新价格和直接预订。查询迪纳摩、列宁格勒大街及 Tsarskaya Ploshchad 住宅区公寓。",
+      "offersTitle": "直接预订优惠及特别活动",
+      "offersDescription": "Amazy Apart 优惠：首次预订优惠码 Online5 及长期住宿折扣。",
+      "ownersTitle": "莫斯科公寓管理",
+      "ownersDescription": "莫斯科短租公寓管理：公寓准备、客人接待及日常维护。"
+    }
+  },
+  "guarantee": {
+    "title": "最优价格保证",
+    "hero": "直接预订更划算，享受最优价格保证。",
+    "terms": "如果预订平台上同一公寓、相同日期及相同预订条件的价格更低，我们将提供不高于该报价的价格。",
+    "cta": "查看价格并预订",
+    "why": "为什么选择直接预订",
+    "discountTitle": "官网折扣与优惠码",
+    "discountText": "首次预订使用 Online5 可享受 5% 折扣。付款前请确认最终价格和优惠条件。",
+    "contactTitle": "直接联系团队",
+    "contactText": "直接与我们沟通日期、入住安排和住宿需求。",
+    "claim": "发现更低价格？",
+    "claimText": "请发送包含日期、入住人数、付款及取消条件的链接或截图。我们将比较同一公寓的最终总价。",
+    "claimCta": "发送报价进行比较",
+    "claimDraft": "您好！我想申请最优价格保证。公寓：… 日期：… 人数：… 总价及付款/取消条件：… 报价链接：…"
+  },
+  "max": {
+    "write": "通过 MAX 联系",
+    "contact": "MAX 联系方式",
+    "description": "复制我们的 MAX 电话号码，在应用中查找联系人。如找不到，请致电或通过 Telegram 联系我们。",
+    "copy": "复制号码",
+    "copied": "号码已复制",
+    "failed": "无法复制，请手动选中并复制号码。"
   }
 }

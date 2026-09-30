@@ -1,39 +1,12 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
-
 import en from './locales/en.json';
 import ru from './locales/ru.json';
 import zh from './locales/zh.json';
-
-const resources = {
-  en: {
-    translation: en,
-  },
-  ru: {
-    translation: ru,
-  },
-  zh: {
-    translation: zh,
-  },
-};
-
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    fallbackLng: 'ru',
-    debug: true,
-
-    interpolation: {
-      escapeValue: false,
-    },
-
-    detection: {
-      order: ['localStorage', 'navigator', 'htmlTag'],
-      caches: [],
-    },
-  });
-
+import { languageFromPath } from './lib/site';
+i18n.use(initReactI18next).init({
+  resources: { en: { translation: en }, ru: { translation: ru }, zh: { translation: zh } },
+  lng: typeof window === 'undefined' ? 'ru' : languageFromPath(window.location.pathname),
+  fallbackLng: 'ru', supportedLngs: ['ru', 'en', 'zh'], interpolation: { escapeValue: false },
+});
 export default i18n;

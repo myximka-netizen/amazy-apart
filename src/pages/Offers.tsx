@@ -1,3 +1,5 @@
+import { DirectBooking } from '@/components/DirectBooking';
+import { SEO } from '@/components/SEO';
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Gift, Calendar, Percent, Star, Clock, Heart } from "lucide-react";
@@ -14,10 +16,11 @@ const Offers = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO title={t('upgrade.seo.offersTitle')} description={t('upgrade.seo.offersDescription')} />
       <Header />
 
       {/* Hero Section */}
-      <section className="bg-gradient-hero py-20 pt-32">
+      <section id="main-content" className="bg-gradient-hero py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center space-y-6">
             <h1 className="text-4xl md:text-6xl font-bold text-foreground">
@@ -29,6 +32,8 @@ const Offers = () => {
           </div>
         </div>
       </section>
+
+      <section className="container mx-auto px-4 pt-10"><DirectBooking showClaim /></section>
 
       {/* Main Offers */}
       <section className="py-16">
