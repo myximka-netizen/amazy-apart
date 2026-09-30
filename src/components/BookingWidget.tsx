@@ -30,8 +30,8 @@ export function BookingWidget({ kind, className }: { kind: 'search' | 'list'; cl
       <p>{t(status === 'error' ? 'upgrade.searchError' : 'upgrade.searchLoading')}</p>
       {status === 'error' && <Button variant="outline" className="mt-4" onClick={() => setAttempt(a => a + 1)}>{t('upgrade.searchRetry')}</Button>}
     </div>}
-    <div className="mt-4 flex flex-wrap justify-center gap-4 text-sm">
-      <a href={`https://homereserve.ru/${SITE.bookingToken}`} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4" onClick={() => trackGoal('booking_click')}>{t('upgrade.allApartments')}</a>
+    <div className="mt-4 flex flex-wrap justify-center items-center gap-4 text-sm">
+      <Button asChild variant={kind === 'search' ? 'default' : 'outline'} className="h-auto min-h-11 whitespace-normal py-3"><a href={`https://homereserve.ru/${SITE.bookingToken}`} target="_blank" rel="noopener noreferrer" onClick={() => trackGoal('booking_click')}>{t(kind === 'search' ? 'guarantee.cta' : 'upgrade.allApartments')}</a></Button>
       <a href={SITE.telegram} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4" onClick={() => trackGoal('telegram_click')}>{t('upgrade.contactFallback')}</a>
     </div>
   </div>;

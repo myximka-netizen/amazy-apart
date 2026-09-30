@@ -8,7 +8,7 @@ const sitemap = await readFile(resolve(dist, 'sitemap.xml'), 'utf8');
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
 assert.equal(urls.length, 42, 'Expected 42 localized pages');
 assert.equal(new Set(urls).size, 42, 'Sitemap URLs must be unique');
-const attrs = tag => Object.fromEntries([...tag.matchAll(/([\w:-]+)="([^"]*)"/g)].map(m => [m[1], m[2].replaceAll('&amp;', '&')]));
+const attrs = tag => Object.fromEntries([...tag.matchAll(/([\w:-]+)="([^"]*)"/g)].map(m => [m[1].toLowerCase(), m[2].replaceAll('&amp;', '&')]));
 const tags = (html, name) => [...html.matchAll(new RegExp('<' + name + '\\b[^>]*>', 'g'))].map(m => attrs(m[0]));
 async function localResource(url) {
   const pathname = decodeURIComponent(new URL(url, origin).pathname);
