@@ -206,7 +206,7 @@ const Index = () => {
 
             {/* Awards and Certificates Carousel */}
             <motion.div
-              className="flex justify-center"
+              className="flex justify-center px-8"
               initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
