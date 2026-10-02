@@ -20,6 +20,7 @@ const seenResources = new Set();
 for (const url of urls) {
   const path = new URL(url).pathname;
   const html = await readFile(resolve(dist, '.' + path, 'index.html'), 'utf8');
+  assert.ok(!html.includes('aria-labelledby="location-heading"'), url + ': duplicate location cards removed');
   const lang = path.startsWith('/en/') ? 'en' : path.startsWith('/zh/') ? 'zh' : 'ru';
   assert.match(html, new RegExp('<html[^>]*lang="' + lang + '"'), url + ': HTML language');
   assert.equal([...html.matchAll(/<title\b/g)].length, 1, url + ': one title');
@@ -69,7 +70,10 @@ for (const url of urls) {
   }
   if (['/', '/en/', '/zh/'].includes(path)) {
     const locale = JSON.parse(await readFile(resolve('src/locales', lang + '.json'), 'utf8'));
-    assert.ok(html.includes(locale.guarantee.hero), url + ': visible guarantee');
+    assert.ok(html.includes(locale.hero.title), url + ': approved hero title');
+    assert.ok(html.includes(locale.hero.subtitle), url + ': restored hero subtitle');
+    assert.ok(html.includes(locale.hero.description), url + ': approved hero description');
+    assert.ok(html.includes(locale.hero.directBooking), url + ': visible direct booking benefit');
     assert.ok(html.includes(locale.guarantee.terms), url + ': visible comparison conditions');
     assert.ok(html.includes('Online5'), url + ': existing direct booking offer');
   }
