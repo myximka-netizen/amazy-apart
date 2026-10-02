@@ -43,15 +43,15 @@ const fs = require('node:fs/promises');
   // Exercise failure and successful retry without relying on a third-party outage.
   const failure = await browser.newContext();
   await failure.route('**/mc.yandex.ru/**', route => route.abort());
-  await failure.route('https://homereserve.ru/widget.js', route => route.abort());
+  await failure.route('https://homereserve.ru/widget.js*', route => route.abort());
   const fallback = await failure.newPage();
   await fallback.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded' });
   const retry = fallback.getByRole('button', { name: 'Попробовать снова', exact: true });
   await fallback.locator('#hr-widget').locator('..').getByRole('status').waitFor();
   await fallback.waitForFunction(() => document.querySelector('#hr-widget')?.parentElement.querySelector('a[href="https://homereserve.ru/HYkUIAGFQD"]'));
   assert.ok(await retry.isVisible(), 'Retry only becomes visible on widget failure');
-  await failure.unroute('https://homereserve.ru/widget.js');
-  await failure.route('https://homereserve.ru/widget.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.homereserve = { initWidgetSearch() { document.getElementById("hr-widget").innerHTML = "<div data-qa-widget>Booking widget loaded</div>"; }, initWidgetList() {} };' }));
+  await failure.unroute('https://homereserve.ru/widget.js*');
+  await failure.route('https://homereserve.ru/widget.js*', route => route.fulfill({ contentType: 'application/javascript', headers: { 'Access-Control-Allow-Origin': '*' }, body: 'window.homereserve = { initWidgetSearch() { document.getElementById("hr-widget").innerHTML = "<div data-qa-widget>Booking widget loaded</div>"; }, initWidgetList() {} };' }));
   await retry.click();
   await fallback.locator('[data-qa-widget]').waitFor();
   await fallback.waitForFunction(() => !document.querySelector('#hr-widget')?.parentElement.querySelector('[role="status"]'));
