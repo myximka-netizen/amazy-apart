@@ -628,7 +628,7 @@ const Index = () => {
               transition={{ duration: 0.8, ease: "easeOut" }}
               whileHover={{ scale: 1.02 }}
             >
-              <div className="flex items-start space-x-6">
+              <div className="flex flex-col items-start gap-6 sm:flex-row">
                 <div className="w-20 h-20 bg-gradient-luxury rounded-2xl flex items-center justify-center flex-shrink-0">
                   <Users className="h-10 w-10 text-luxury-foreground" />
                 </div>
@@ -670,7 +670,7 @@ const Index = () => {
               transition={{ duration: 0.8, ease: "easeOut" }}
               whileHover={{ scale: 1.02 }}
             >
-              <div className="flex items-start space-x-6">
+              <div className="flex flex-col items-start gap-6 sm:flex-row">
                 <div className="w-20 h-20 bg-gradient-luxury rounded-2xl flex items-center justify-center flex-shrink-0">
                   <Sparkles className="h-10 w-10 text-luxury-foreground" />
                 </div>

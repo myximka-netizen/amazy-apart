@@ -22,6 +22,10 @@ const fs = require('node:fs/promises');
     await page.setViewportSize({ width, height: 1000 });
     await page.waitForTimeout(150);
     const metrics = await page.evaluate(() => ({ viewport: innerWidth, width: document.documentElement.scrollWidth, headerWidth: document.querySelector('header').scrollWidth, h1: getComputedStyle(document.querySelector('h1')).fontSize, wrapper: getComputedStyle(document.querySelector('#hr-widget').parentElement).backgroundColor, heroGold: getComputedStyle(document.querySelector('h1 span')).color }));
+    if (metrics.width > width + 1) {
+      console.log('Overflow elements:', await page.evaluate(() => [...document.querySelectorAll('body *')].filter(element => element.getBoundingClientRect().right > innerWidth + 1).map(element => ({ tag: element.tagName, className: element.className, text: element.textContent?.slice(0, 80), right: element.getBoundingClientRect().right })).slice(-20)));
+      await page.screenshot({ path: `artifacts/layout/overflow-${width}.png`, fullPage: true });
+    }
     assert.ok(metrics.width <= width + 1, 'Horizontal overflow at ' + width + ': ' + JSON.stringify(metrics));
     assert.ok(metrics.headerWidth <= width + 1, 'Header overflow at ' + width);
     assert.equal(metrics.wrapper, 'rgba(0, 0, 0, 0)', 'Booking wrapper should remain transparent');
