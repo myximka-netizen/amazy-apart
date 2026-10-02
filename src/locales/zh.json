@@ -9,10 +9,11 @@
     "offers": "特别优惠"
   },
   "hero": {
-    "title": "莫斯科短租公寓",
-    "subtitle": "",
-    "description": "选择日期、查看总价，并直接与我们的团队联系。",
-    "findApartments": "寻找公寓"
+    "title": "现代公寓",
+    "subtitle": "为您的舒适而设",
+    "description": "在莫斯科也能拥有家的舒适：温馨公寓、独立厨房，以及休闲度假或商务出行所需的一切。真实照片、便捷入住和全天候支持。",
+    "findApartments": "寻找公寓",
+    "directBooking": "通过我们的官方网站直接预订，享受最优惠价格。我们保证：价格不高于预订平台。"
   },
   "homepage": {
     "achievements": {

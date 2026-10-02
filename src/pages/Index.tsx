@@ -1,6 +1,5 @@
 import { MaxContact } from '@/components/MaxContact';
 import { DirectBooking } from '@/components/DirectBooking';
-import { LocationLinks } from '@/components/LocationLinks';
 import { SITE, trackGoal } from '@/lib/site';
 import { Link } from "react-router-dom";
 import { ArrowRight, Shield, Clock, Star, MapPin, Users, Award, Trophy, Wifi, Monitor, Sparkles, X, Phone, MessageCircle } from "lucide-react";
@@ -85,7 +84,7 @@ const Index = () => {
 
       {/* Hero Section with Booking */}
       <motion.section
-        id="main-content" className="relative min-h-[660px] py-12 md:py-16 flex items-center justify-center overflow-hidden"
+        id="main-content" className="relative min-h-[80vh] py-10 md:py-16 flex items-center justify-center overflow-hidden"
         initial={false}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
@@ -106,15 +105,16 @@ const Index = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
             >
-              <Link to="/offers/" className="mb-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-foreground"><Shield className="h-4 w-4 text-primary" />{t('guarantee.title')}</Link>
-              <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold leading-tight mb-6">
+              <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold leading-tight mb-8">
                 {t('hero.title')}
-
+                <span className="block text-luxury">{t('hero.subtitle')}</span>
               </h1>
               <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-                {t('guarantee.hero')}
+                {t('hero.description')}
               </p>
-              <p className="mx-auto mt-4 max-w-3xl text-sm leading-relaxed text-white/90">{t('guarantee.terms')}</p>
+              <p className="mx-auto mt-6 max-w-3xl text-xl md:text-2xl font-semibold leading-relaxed text-luxury">
+                {t('hero.directBooking')}
+              </p>
             </motion.div>
 
             {/* Integrated Search Widget */}
@@ -123,7 +123,7 @@ const Index = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
             >
-              <SearchWidget className="rounded-2xl bg-white/95 text-foreground p-5 md:p-6 max-w-4xl mx-auto" />
+              <SearchWidget className="bg-transparent rounded-2xl px-0 py-4 sm:p-8 max-w-4xl mx-auto" />
             </motion.div>
 
             {/* Quick Contact Section */}
@@ -173,8 +173,7 @@ const Index = () => {
       </motion.section>
 
       <section className="container mx-auto px-4 pt-10"><DirectBooking /></section>
-      <LocationLinks />
-      <section className="container mx-auto px-4 pb-12">
+      <section className="container mx-auto px-4 py-12">
         <h2 className="mb-6 text-3xl font-bold">{t('upgrade.plansTitle')}</h2>
         <div className="grid gap-5 md:grid-cols-2">
           {[{ path: '/business-travel/', title: 'businessCard', text: 'businessCardText' }, { path: '/long-stay/', title: 'longCard', text: 'longCardText' }].map(item => <Link key={item.path} to={item.path} className="rounded-2xl border bg-surface p-6 md:p-8 hover:border-primary"><h3 className="text-2xl font-semibold">{t(`upgrade.${item.title}`)}</h3><p className="my-3 text-muted-foreground">{t(`upgrade.${item.text}`)}</p><span className="inline-flex items-center gap-2 font-semibold text-primary">{t('upgrade.details')}<ArrowRight size={18} /></span></Link>)}
@@ -207,7 +206,7 @@ const Index = () => {
 
             {/* Awards and Certificates Carousel */}
             <motion.div
-              className="flex justify-center"
+              className="flex justify-center px-8"
               initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -629,7 +628,7 @@ const Index = () => {
               transition={{ duration: 0.8, ease: "easeOut" }}
               whileHover={{ scale: 1.02 }}
             >
-              <div className="flex items-start space-x-6">
+              <div className="flex flex-col items-start gap-6 sm:flex-row">
                 <div className="w-20 h-20 bg-gradient-luxury rounded-2xl flex items-center justify-center flex-shrink-0">
                   <Users className="h-10 w-10 text-luxury-foreground" />
                 </div>
@@ -671,7 +670,7 @@ const Index = () => {
               transition={{ duration: 0.8, ease: "easeOut" }}
               whileHover={{ scale: 1.02 }}
             >
-              <div className="flex items-start space-x-6">
+              <div className="flex flex-col items-start gap-6 sm:flex-row">
                 <div className="w-20 h-20 bg-gradient-luxury rounded-2xl flex items-center justify-center flex-shrink-0">
                   <Sparkles className="h-10 w-10 text-luxury-foreground" />
                 </div>
