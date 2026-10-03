@@ -18,8 +18,17 @@ const fs = require('node:fs/promises');
   await page.evaluate(() => document.fonts.ready);
   console.log(JSON.stringify({ liveWidget: vendorReady, frameCount: page.frames().length }));
   await page.screenshot({ path: 'artifacts/layout/desktop.png' });
-  for (const width of [1440, 1280, 1024, 768, 390, 320]) {
-    await page.setViewportSize({ width, height: 1000 });
+  for (const { width, height, firstScreen } of [
+    { width: 1440, height: 900, firstScreen: true },
+    { width: 1366, height: 768, firstScreen: true },
+    { width: 1280, height: 800, firstScreen: true },
+    { width: 1024, height: 768 },
+    { width: 768, height: 1024 },
+    { width: 390, height: 844, firstScreen: true },
+    { width: 375, height: 812, firstScreen: true },
+    { width: 320, height: 700 },
+  ]) {
+    await page.setViewportSize({ width, height });
     await page.waitForTimeout(150);
     const metrics = await page.evaluate(() => ({ viewport: innerWidth, width: document.documentElement.scrollWidth, headerWidth: document.querySelector('header').scrollWidth, h1: getComputedStyle(document.querySelector('h1')).fontSize, wrapper: getComputedStyle(document.querySelector('#hr-widget').parentElement).backgroundColor, heroGold: getComputedStyle(document.querySelector('h1 span')).color }));
     if (metrics.width > width + 1) {
@@ -31,6 +40,12 @@ const fs = require('node:fs/promises');
     assert.equal(metrics.wrapper, 'rgba(0, 0, 0, 0)', 'Booking wrapper should remain transparent');
     if (width >= 1024) assert.ok(await page.locator('header nav a[href="/owners/"]').first().isVisible(), 'Owners must be in desktop navigation');
     console.log(JSON.stringify({ width, ...metrics }));
+    if (vendorReady) {
+      const booking = await page.locator('#hr-widget').boundingBox();
+      console.log(JSON.stringify({ viewport: `${width}x${height}`, bookingTop: booking.y, bookingBottom: booking.y + booking.height }));
+      if (firstScreen) assert.ok(booking.height > 0 && booking.y + booking.height <= height, `Booking must fit the first screen at ${width}x${height}: ${JSON.stringify(booking)}`);
+    }
+    if (width === 1366) await page.screenshot({ path: 'artifacts/layout/desktop.png' });
     if (width === 390) await page.screenshot({ path: 'artifacts/layout/mobile.png', fullPage: false });
   }
   await page.getByRole('button', { name: 'Меню', exact: true }).click();
