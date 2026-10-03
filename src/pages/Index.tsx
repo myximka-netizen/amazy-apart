@@ -84,7 +84,7 @@ const Index = () => {
 
       {/* Hero Section with Booking */}
       <motion.section
-        id="main-content" className="relative min-h-[80vh] py-10 md:py-16 flex items-center justify-center overflow-hidden"
+        id="main-content" className="relative min-h-[80vh] py-8 md:py-12 flex items-center justify-center overflow-hidden"
         initial={false}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
@@ -100,20 +100,18 @@ const Index = () => {
         <div className="relative z-10 container mx-auto px-4">
           <div className="max-w-6xl mx-auto text-center">
             <motion.div
-              className="text-white mb-12"
+              className="text-white mb-6 md:mb-8"
               initial={false}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
             >
-              <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold leading-tight mb-8">
+              <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold leading-tight mb-6">
                 {t('hero.title')}
                 <span className="block text-luxury">{t('hero.subtitle')}</span>
               </h1>
               <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-                {t('hero.description')}
-              </p>
-              <p className="mx-auto mt-6 max-w-3xl text-xl md:text-2xl font-semibold leading-relaxed text-luxury">
-                {t('hero.directBooking')}
+                {t('hero.description')}{' '}
+                <strong className="font-semibold text-luxury">{t('hero.directBooking')}</strong>
               </p>
             </motion.div>
 
