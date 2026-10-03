@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile, access } from 'node:fs/promises';
+import { readFile, access, readdir } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 
 const origin = 'https://amazy-apart.ru';
@@ -17,9 +17,22 @@ async function localResource(url) {
 }
 const maxUrl = 'https://max.ru/u/f9LHodD0cOIwf5cut6Q6zehywppvSEDtNHLjrHEdFoocJ4wMC6UtJJZ7TJk';
 const seenResources = new Set();
+const phoneDigits = ['Kzc5OTU1MDg1ODA4', 'Kzc5OTk5OTQ3MzU0'].map(value => Buffer.from(value, 'base64').toString().replace(/\D/g, ''));
+const hasPhone = text => phoneDigits.some(number => text.replace(/[\s()+-]/g, '').includes(number));
+const phoneHref = 'tel:+' + phoneDigits[0];
+const whatsappHref = 'https://wa.me/' + phoneDigits[0];
 for (const url of urls) {
   const path = new URL(url).pathname;
   const html = await readFile(resolve(dist, '.' + path, 'index.html'), 'utf8');
+  // The owner explicitly keeps number-bearing hrefs; all other HTML must be free of the numbers.
+  const withoutContactHrefs = html.replace(/\bhref="(?:tel:[^"]+|https:\/\/wa\.me\/[^"]+)"/g, '');
+  assert.ok(!hasPhone(withoutContactHrefs), url + ': no phone outside retained contact hrefs');
+  const phoneLinks = tags(html, 'a').filter(link => link.href?.startsWith('tel:'));
+  assert.ok(phoneLinks.length > 0, url + ': phone links preserved');
+  assert.ok(phoneLinks.every(link => link.href === phoneHref), url + ': exact phone destination preserved');
+  const whatsappLinks = tags(html, 'a').filter(link => link.href?.startsWith('https://wa.me/'));
+  assert.ok(whatsappLinks.length > 0, url + ': WhatsApp links preserved');
+  assert.ok(whatsappLinks.every(link => link.href === whatsappHref || link.href.startsWith(whatsappHref + '?')), url + ': WhatsApp destination preserved');
   assert.ok(!html.includes('aria-labelledby="location-heading"'), url + ': duplicate location cards removed');
   const lang = path.startsWith('/en/') ? 'en' : path.startsWith('/zh/') ? 'zh' : 'ru';
   assert.match(html, new RegExp('<html[^>]*lang="' + lang + '"'), url + ': HTML language');
@@ -55,6 +68,8 @@ for (const url of urls) {
   }
   for (const match of html.matchAll(/<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)) {
     const data = JSON.parse(match[1]);
+    assert.ok(!hasPhone(match[1]), url + ': no phone in structured data, including nested entities');
+    assert.ok(!/"telephone"\s*:/.test(match[1]), url + ': no telephone fields in structured data');
     assert.ok(data['@type'], url + ': schema type');
     if (data['@type'] === 'Organization' || data['@type'] === 'LodgingBusiness') assert.ok(data.sameAs.includes(maxUrl), url + ': MAX sameAs');
     assert.ok(!match[1].includes('/hero-image.jpg'), 'Obsolete schema image');
@@ -79,6 +94,16 @@ for (const url of urls) {
   }
   assert.ok(!html.includes('https://max.ru/u/+7'), 'Never manufacture a MAX URL from a phone number');
 }
+for (const file of await readdir(resolve(dist, 'assets'))) {
+  if (!file.endsWith('.js')) continue;
+  assert.ok(!hasPhone(await readFile(resolve(dist, 'assets', file), 'utf8')), file + ': no literal phone in shipped JavaScript');
+}
+for (const kind of ['main', 'max']) {
+  const svg = await readFile(resolve(dist, `contact-${kind}.svg`), 'utf8');
+  assert.match(svg, /<path\b/);
+  assert.ok(!/<text\b/.test(svg) && !hasPhone(svg), 'Phone artwork contains outlines, not number text');
+}
+console.log('Verified phone omission from HTML text, structured data and JavaScript literals; existing phone/WhatsApp destinations preserved.');
 await localResource('/logo.png');
 const og = await readFile(resolve(dist, 'og-image.png'));
 assert.equal(og.readUInt32BE(16), 1730);

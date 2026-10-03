@@ -30,9 +30,9 @@ export function generateOrganizationData() {
     '@context': 'https://schema.org', '@type': 'Organization',
     '@id': `${SITE.origin}/#organization`, name: 'Волшебно тут', alternateName: 'Amazy Apart',
     url: `${SITE.origin}/`, logo: SITE.logo,
-    telephone: SITE.phone, email: SITE.email,
-    contactPoint: { '@type': 'ContactPoint', telephone: SITE.phone, contactType: 'customer service', availableLanguage: ['Russian', 'English', 'Chinese'] },
-    sameAs: [SITE.telegram, SITE.whatsapp, ...(SITE.maxProfileUrl ? [SITE.maxProfileUrl] : [])],
+    email: SITE.email,
+    contactPoint: { '@type': 'ContactPoint', email: SITE.email, contactType: 'customer service', availableLanguage: ['Russian', 'English', 'Chinese'] },
+    sameAs: [SITE.telegram, ...(SITE.maxProfileUrl ? [SITE.maxProfileUrl] : [])],
   };
 }
 export function generateWebSiteData() {

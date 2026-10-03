@@ -1,3 +1,4 @@
+import { PhoneNumber } from '@/components/PhoneNumber';
 import { MaxContact } from '@/components/MaxContact';
 import { DirectBooking } from '@/components/DirectBooking';
 import { SITE, trackGoal } from '@/lib/site';
@@ -137,7 +138,7 @@ const Index = () => {
                   href={`tel:${SITE.phone}`} onClick={() => trackGoal('phone_click')}
                   className="text-lg font-medium hover:text-luxury transition-colors"
                 >
-                  {SITE.displayPhone}
+                  <PhoneNumber />
                 </a>
               </div>
 

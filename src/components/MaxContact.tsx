@@ -1,3 +1,4 @@
+import { PhoneNumber } from '@/components/PhoneNumber';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy, MessageCircle } from 'lucide-react';
@@ -19,6 +20,6 @@ export function MaxContact({ className = '' }: { className?: string }) {
   }
   return <Dialog onOpenChange={() => setStatus('')}>
     <DialogTrigger asChild><button type="button" className={style}><MessageCircle className="h-5 w-5 shrink-0" aria-hidden="true" />{t('max.contact')}</button></DialogTrigger>
-    <DialogContent className="z-[120]"><DialogTitle>{t('max.contact')}</DialogTitle><DialogDescription>{t('max.description')}</DialogDescription><p className="select-all text-2xl font-bold">{SITE.maxDisplayPhone}</p><Button onClick={copy}><Copy className="mr-2 h-4 w-4" />{t('max.copy')}</Button><p role="status" aria-live="polite" className="text-sm">{status}</p><div className="flex flex-wrap gap-4 text-sm"><a className="underline" href={`tel:${SITE.phone}`} onClick={() => trackGoal('phone_click')}>{SITE.displayPhone}</a><a className="underline" href={SITE.telegram} target="_blank" rel="noopener noreferrer" onClick={() => trackGoal('telegram_click')}>Telegram</a></div></DialogContent>
+    <DialogContent className="z-[120]"><DialogTitle>{t('max.contact')}</DialogTitle><DialogDescription>{t('max.description')}</DialogDescription><p className="select-all text-2xl font-bold"><PhoneNumber kind="max" /></p><Button onClick={copy}><Copy className="mr-2 h-4 w-4" />{t('max.copy')}</Button><p role="status" aria-live="polite" className="text-sm">{status}</p><div className="flex flex-wrap gap-4 text-sm"><a className="underline" href={`tel:${SITE.phone}`} onClick={() => trackGoal('phone_click')}><PhoneNumber /></a><a className="underline" href={SITE.telegram} target="_blank" rel="noopener noreferrer" onClick={() => trackGoal('telegram_click')}>Telegram</a></div></DialogContent>
   </Dialog>;
 }
