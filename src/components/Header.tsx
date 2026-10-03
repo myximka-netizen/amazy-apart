@@ -1,3 +1,4 @@
+import { PhoneNumber } from '@/components/PhoneNumber';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Home, Building2, Info, Phone, Users, Gift } from 'lucide-react';
@@ -39,7 +40,7 @@ export function Header() {
       </div>
       {open && <nav id="mobile-navigation" aria-label={t('upgrade.menu')} className="lg:hidden grid gap-1 border-t py-4">
         {navigation.map(({ href, label, icon: Icon }) => <Link key={href} to={href} aria-current={isCurrent(href) ? 'page' : undefined} className="flex items-center rounded-lg px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-surface aria-[current=page]:bg-warm aria-[current=page]:text-warm-foreground"><Icon className="mr-3 h-5 w-5" aria-hidden="true" />{label}</Link>)}
-        <a href={`tel:${SITE.phone}`} className="px-4 py-3 font-semibold" onClick={() => trackGoal('phone_click')}>{SITE.displayPhone}</a>
+        <a href={`tel:${SITE.phone}`} className="px-4 py-3 font-semibold" onClick={() => trackGoal('phone_click')}><PhoneNumber /></a>
       </nav>}
     </div>
   </header>;

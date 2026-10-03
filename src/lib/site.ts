@@ -1,9 +1,13 @@
+// Obfuscation avoids literal numbers in the shipped JavaScript. It is reversible;
+// the owner explicitly keeps public phone/WhatsApp link destinations unchanged.
+const phone = atob('Kzc5OTU1MDg1ODA4');
+const maxPhone = atob('Kzc5OTk5OTQ3MzU0');
 export const SITE = {
   origin: 'https://amazy-apart.ru', brand: 'Волшебно тут | Amazy Apart',
-  phone: '+79955085808', displayPhone: '+7 995 508 58 08',
+  phone,
   email: 'info@volshebno-tut.ru', supportEmail: 'support@volshebno-tut.ru',
-  telegram: 'https://t.me/Volshebno_tyt', whatsapp: 'https://wa.me/79955085808',
-  maxPhone: '+79999947354', maxDisplayPhone: '+7 999 994-73-54',
+  telegram: 'https://t.me/Volshebno_tyt', whatsapp: `https://wa.me/${phone.slice(1)}`,
+  maxPhone,
   // Profile link supplied by the owner; keep the complete case-sensitive URL.
   maxProfileUrl: 'https://max.ru/u/f9LHodD0cOIwf5cut6Q6zehywppvSEDtNHLjrHEdFoocJ4wMC6UtJJZ7TJk' as string,
   logo: 'https://amazy-apart.ru/logo.png',

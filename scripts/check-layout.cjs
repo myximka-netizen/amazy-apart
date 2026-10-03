@@ -14,6 +14,9 @@ const fs = require('node:fs/promises');
   await page.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded' });
   await page.locator('h1').waitFor();
   assert.equal(await page.locator('[aria-labelledby="location-heading"]').count(), 0, 'Duplicate location cards removed');
+  const phoneNumbers = ['Kzc5OTU1MDg1ODA4', 'Kzc5OTk5OTQ3MzU0'].map(value => Buffer.from(value, 'base64').toString());
+  const hasPhoneText = text => phoneNumbers.some(number => text.replace(/[\s()+-]/g, '').includes(number.slice(1)));
+  assert.ok(!hasPhoneText(await page.locator('body').innerText()), 'Visible phone is artwork, not harvestable DOM text');
   const vendorReady = await page.waitForFunction(() => document.querySelector('#hr-widget')?.childElementCount > 0, null, { timeout: 22000 }).then(() => true).catch(() => false);
   await page.evaluate(() => document.fonts.ready);
   console.log(JSON.stringify({ liveWidget: vendorReady, frameCount: page.frames().length }));
@@ -53,6 +56,23 @@ const fs = require('node:fs/promises');
   await page.waitForURL('**/owners/');
   assert.equal(await page.locator('#mobile-navigation').count(), 0, 'Menu closes after navigation');
   assert.equal(await page.locator('[aria-labelledby="location-heading"]').count(), 0, 'Duplicate location cards removed');
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('http://127.0.0.1:4173/contacts/', { waitUntil: 'domcontentloaded' });
+  await page.locator('main [data-phone-display="max"]').waitFor();
+  assert.ok(!hasPhoneText(await page.locator('body').innerText()), 'Contact page must not expose number text');
+  for (const json of await page.locator('script[type="application/ld+json"]').allTextContents()) assert.ok(!hasPhoneText(json), 'Hydrated SEO data must not expose numbers');
+  assert.equal(await page.locator('main a[href^="tel:"]').getAttribute('href'), `tel:${phoneNumbers[0]}`, 'Phone link target unchanged');
+  assert.equal(await page.locator('main a[href^="https://wa.me/"]').getAttribute('href'), `https://wa.me/${phoneNumbers[0].slice(1)}`, 'WhatsApp target unchanged');
+  for (const kind of ['main', 'max']) {
+    assert.ok((await page.request.get(`http://127.0.0.1:4173/contact-${kind}.svg`)).ok(), 'Phone artwork loads');
+    const mask = await page.locator(`main [data-phone-display="${kind}"]`).evaluate(node => getComputedStyle(node).maskImage);
+    assert.ok(mask.includes(`contact-${kind}.svg`), 'Phone artwork is applied');
+  }
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://127.0.0.1:4173' });
+  await page.getByRole('button', { name: 'Скопировать номер', exact: true }).click();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), phoneNumbers[0], 'Existing copy action preserves the complete number');
+  await page.evaluate(() => document.fonts.ready);
+  await page.screenshot({ path: 'artifacts/layout/contacts.png' });
   await context.close();
 
   // Exercise failure and successful retry without relying on a third-party outage.
@@ -74,5 +94,5 @@ const fs = require('node:fs/promises');
   await failure.close();
   await browser.close();
   assert.deepEqual(errors, [], 'Browser runtime errors');
-  console.log('PASS: desktop/mobile layout, owners navigation, transparent booking, live widget status and fallback/retry.');
+  console.log('PASS: desktop/mobile layout, owners navigation, booking/retry, phone artwork, unchanged contact links and phone copy.');
 })().catch(error => { console.error(error); process.exit(1); });
