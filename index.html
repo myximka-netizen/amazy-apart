@@ -4,6 +4,42 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+    <script>
+      (() => {
+        const blockedHosts = [['ji', 'vo.ru'].join(''), ['ji', 'vosite.com'].join('')];
+        const isBlockedUrl = (value) => {
+          if (!value) return false;
+          try {
+            const host = new URL(value, location.href).hostname.toLowerCase();
+            return blockedHosts.some((blocked) => host === blocked || host.endsWith('.' + blocked));
+          } catch {
+            return false;
+          }
+        };
+        const isBlockedNode = (node) => {
+          if (!(node instanceof Element)) return false;
+          const url = node.getAttribute('src') || node.getAttribute('href');
+          const marker = ((node.id || '') + ' ' + (typeof node.className === 'string' ? node.className : '')).toLowerCase();
+          return isBlockedUrl(url) || marker.includes(['ji', 'vo'].join(''));
+        };
+        const purge = (root) => {
+          if (root instanceof Element && isBlockedNode(root)) {
+            root.remove();
+            return;
+          }
+          if (!(root instanceof Element || root instanceof Document)) return;
+          root.querySelectorAll('script[src],iframe[src],link[href],[id],[class]').forEach((node) => {
+            if (isBlockedNode(node)) node.remove();
+          });
+        };
+        purge(document);
+        new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) purge(node);
+          }
+        }).observe(document.documentElement, { childList: true, subtree: true });
+      })();
+    </script>
     <link rel="icon" type="image/png" href="/favicon.png?v=2">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2">

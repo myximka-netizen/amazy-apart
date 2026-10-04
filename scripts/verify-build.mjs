@@ -17,6 +17,12 @@ async function localResource(url) {
 }
 const maxUrl = 'https://max.ru/u/f9LHodD0cOIwf5cut6Q6zehywppvSEDtNHLjrHEdFoocJ4wMC6UtJJZ7TJk';
 const seenResources = new Set();
+const forbiddenWidgetFragments = [['code.', 'ji', 'vo.ru/widget'].join(''), ['Hr4', 'ChPwXXA'].join('')];
+const assertNoForbiddenWidget = (text, label) => {
+  for (const fragment of forbiddenWidgetFragments) {
+    assert.ok(!text.includes(fragment), label + ': forbidden chat widget fragment ' + fragment);
+  }
+};
 const phoneDigits = ['Kzc5OTU1MDg1ODA4', 'Kzc5OTk5OTQ3MzU0'].map(value => Buffer.from(value, 'base64').toString().replace(/\D/g, ''));
 const hasPhone = text => phoneDigits.some(number => text.replace(/[\s()+-]/g, '').includes(number));
 const phoneHref = 'tel:+' + phoneDigits[0];
@@ -24,6 +30,7 @@ const whatsappHref = 'https://wa.me/' + phoneDigits[0];
 for (const url of urls) {
   const path = new URL(url).pathname;
   const html = await readFile(resolve(dist, '.' + path, 'index.html'), 'utf8');
+  assertNoForbiddenWidget(html, url);
   // The owner explicitly keeps number-bearing hrefs; all other HTML must be free of the numbers.
   const withoutContactHrefs = html.replace(/\bhref="(?:tel:[^"]+|https:\/\/wa\.me\/[^"]+)"/g, '');
   assert.ok(!hasPhone(withoutContactHrefs), url + ': no phone outside retained contact hrefs');
@@ -96,7 +103,9 @@ for (const url of urls) {
 }
 for (const file of await readdir(resolve(dist, 'assets'))) {
   if (!file.endsWith('.js')) continue;
-  assert.ok(!hasPhone(await readFile(resolve(dist, 'assets', file), 'utf8')), file + ': no literal phone in shipped JavaScript');
+  const javascript = await readFile(resolve(dist, 'assets', file), 'utf8');
+  assert.ok(!hasPhone(javascript), file + ': no literal phone in shipped JavaScript');
+  assertNoForbiddenWidget(javascript, file);
 }
 for (const kind of ['main', 'max']) {
   const svg = await readFile(resolve(dist, `contact-${kind}.svg`), 'utf8');
