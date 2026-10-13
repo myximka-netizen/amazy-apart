@@ -184,7 +184,7 @@ const Offers = () => {
               {t('offers.cta.subtitle')}
             </p>
 
-            <Link to="/apartments">
+            <Link to="/apartments/">
               <Button size="lg" className="bg-gradient-luxury text-luxury-foreground hover:shadow-luxury hover:scale-105">
                 {t('offers.cta.button')}
               </Button>
