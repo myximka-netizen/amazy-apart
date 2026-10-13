@@ -23,7 +23,9 @@ export function languageFromPath(path: string): Language {
 }
 export function stripLanguage(path: string) { return path.replace(/^\/(en|zh)(?=\/|$)/, '') || '/'; }
 export function localizedPath(path: string, language: string) {
-  const clean = stripLanguage(path).replace(/\/+$/, '') || '/';
+  // Canonical URLs never include campaign parameters, fragments or index.html.
+  const pathname = path.split(/[?#]/, 1)[0].replace(/\/{2,}/g, '/').replace(/\/index\.html$/, '/') || '/';
+  const clean = stripLanguage(pathname).replace(/\/+$/, '') || '/';
   return `${language === 'en' || language === 'zh' ? `/${language}` : ''}${clean === '/' ? '/' : `${clean}/`}`;
 }
 export function siteUrl(path: string, language = 'ru') { return `${SITE.origin}${localizedPath(path, language)}`; }

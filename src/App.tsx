@@ -44,7 +44,7 @@ const App = () => (
   <TooltipProvider>
     <Toaster />
     <Sonner />
-    <BrowserRouter basename={i18n.language === 'ru' ? '/' : `/${i18n.language}`}>
+    <BrowserRouter basename={i18n.language === 'ru' ? '/' : `/${i18n.language}/`}>
       <AppContent />
     </BrowserRouter>
   </TooltipProvider>

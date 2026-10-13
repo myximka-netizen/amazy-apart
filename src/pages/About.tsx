@@ -8,9 +8,10 @@ import { useTranslation } from "react-i18next";
 import { SEO } from "@/components/SEO";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { generateArticleData, generateBreadcrumbData } from "@/components/StructuredData";
+import { siteUrl } from '@/lib/site';
 
 const About = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const stats = [{
     number: "2500+",
     label: t('about.stats.guests')
@@ -49,8 +50,8 @@ const About = () => {
             image: "https://amazy-apart.ru/og-image.jpg"
           }),
           generateBreadcrumbData([
-            { name: "Главная", url: "https://amazy-apart.ru/" },
-            { name: "О нас", url: "https://amazy-apart.ru/about" }
+            { name: t('navigation.home'), url: siteUrl('/', i18n.language) },
+            { name: t('navigation.about'), url: siteUrl('/about/', i18n.language) }
           ])
         ]}
       />

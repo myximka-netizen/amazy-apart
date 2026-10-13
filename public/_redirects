@@ -3,5 +3,8 @@ http://amazy-apart.ru/*    https://amazy-apart.ru/:splat  301!
 http://www.amazy-apart.ru/*    https://amazy-apart.ru/:splat  301!
 https://www.amazy-apart.ru/*    https://amazy-apart.ru/:splat  301!
 
-# SPA routing
-/*    /index.html   200
+# These rules are for hosts that support _redirects (not Timeweb App Platform).
+# Trailing-slash redirects are a hosting setting, not portable _redirects rules.
+# Existing static pages/assets take precedence over this non-forced fallback.
+# On Timeweb, disable SPA Fallback in the application's web-server settings.
+/*    /404.html   404

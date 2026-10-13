@@ -46,6 +46,13 @@ for (const url of urls) {
   assert.equal([...html.matchAll(/<title\b/g)].length, 1, url + ': one title');
   const meta = tags(html, 'meta');
   const links = tags(html, 'link');
+  for (const link of tags(html, 'a')) {
+    if (!link.href || link.href.startsWith('#')) continue;
+    const target = new URL(link.href, url);
+    if (target.origin === origin && !extname(target.pathname)) {
+      assert.ok(target.pathname.endsWith('/'), url + ': internal page link must use canonical trailing slash: ' + link.href);
+    }
+  }
   const maxLinks = tags(html, 'a').filter(a => a.href === maxUrl);
   assert.ok(maxLinks.length > 0, url + ': real MAX profile link');
   for (const link of maxLinks) {
@@ -119,6 +126,11 @@ assert.equal(og.readUInt32BE(16), 1730);
 assert.equal(og.readUInt32BE(20), 909);
 const notFound = await readFile(resolve(dist, '404.html'), 'utf8');
 assert.match(notFound, /noindex/);
+assert.ok(!tags(notFound, 'link').some(link => link.rel === 'canonical' || link.hreflang), '404 must not advertise a canonical or language alternate');
+assert.ok(!urls.some(url => new URL(url).pathname.startsWith('/404')), 'Error pages must not be in the sitemap');
+const redirects = await readFile(resolve(dist, '_redirects'), 'utf8');
+assert.ok(!/^\s*\/\*\s+\/index\.html\s+200/m.test(redirects), 'No soft-404 SPA catch-all');
+assert.match(redirects, /^\/\*\s+\/404\.html\s+404\s*$/m);
 console.log('Verified 42 localized pages: metadata, canonical, hreflang, local links/assets, JSON-LD, preview images, guarantee copy and 404.');
 
 for (const [name, size] of [['favicon-16x16.png',16], ['favicon-32x32.png',32], ['favicon-48x48.png',48], ['favicon.png',48], ['apple-touch-icon.png',180], ['icon-192x192.png',192], ['icon-512x512.png',512], ['icon-maskable-512x512.png',512]]) {

@@ -19,7 +19,7 @@ export function SEO({ title, description, keywords, canonical, ogImage = SITE.so
     <title>{fullTitle}</title><meta name="description" content={description} />
     {keywords && <meta name="keywords" content={keywords} />}
     <meta name="robots" content={noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'} />
-    <link rel="canonical" href={currentUrl} />
+    {!noindex && <link rel="canonical" href={currentUrl} />}
     {!noindex && languages.map(language => <link key={language} rel="alternate" hrefLang={language} href={siteUrl(pathname, language)} />)}
     {!noindex && <link rel="alternate" hrefLang="x-default" href={siteUrl(pathname, 'ru')} />}
     <meta property="og:site_name" content={ogSiteName} /><meta property="og:title" content={fullTitle} /><meta property="og:description" content={description} /><meta property="og:type" content={type} /><meta property="og:url" content={currentUrl} /><meta property="og:image" content={ogImage} />{(ogImageWidth || ogImage === SITE.socialImage) && <meta property="og:image:width" content={String(ogImageWidth || 1730)} />}{(ogImageHeight || ogImage === SITE.socialImage) && <meta property="og:image:height" content={String(ogImageHeight || 909)} />}<meta property="og:image:alt" content={ogImageAlt || description} /><meta property="og:locale" content={locales[i18n.language] || 'ru_RU'} />

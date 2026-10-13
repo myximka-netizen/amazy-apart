@@ -75,7 +75,7 @@ const ApartmentCard = ({
       </CardContent>
       
       <CardFooter className="p-6 pt-0">
-        <Link to={`/apartment/${id}`} className="w-full">
+        <Link to={`/apartment/${id}/`} className="w-full">
           <Button className="w-full" size="lg">
             {t('apartment.viewDetails')}
           </Button>

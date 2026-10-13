@@ -10,7 +10,7 @@ export async function render(url: string) {
   const language = languageFromPath(url);
   await i18n.changeLanguage(language);
   const context: ComponentProps<typeof HelmetProvider>['context'] = {};
-  const html = renderToString(<HelmetProvider context={context}><TooltipProvider><StaticRouter location={url} basename={language === 'ru' ? '/' : `/${language}`}><AppContent /></StaticRouter></TooltipProvider></HelmetProvider>);
+  const html = renderToString(<HelmetProvider context={context}><TooltipProvider><StaticRouter location={url} basename={language === 'ru' ? '/' : `/${language}/`}><AppContent /></StaticRouter></TooltipProvider></HelmetProvider>);
   const helmet = context.helmet!;
   return { html, head: helmet.title.toString() + helmet.meta.toString() + helmet.link.toString() + helmet.script.toString(), language };
 }

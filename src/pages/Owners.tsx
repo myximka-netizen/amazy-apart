@@ -118,7 +118,7 @@ const Owners = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.5 }}
               >
-                <Link to="/contacts">
+                <Link to="/contacts/">
                   <Button size="lg" className="bg-gradient-luxury text-luxury-foreground hover:shadow-luxury hover:scale-105">
                     {t('owners.renovation.button')}
                   </Button>
@@ -348,7 +348,7 @@ const Owners = () => {
               {t('owners.cta.subtitle')}
             </p>
 
-            <Link to="/contacts">
+            <Link to="/contacts/">
               <Button size="lg" className="bg-gradient-luxury text-luxury-foreground hover:shadow-luxury hover:scale-105">
                 {t('owners.cta.button')}
               </Button>
