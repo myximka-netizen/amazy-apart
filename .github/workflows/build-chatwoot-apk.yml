@@ -24,10 +24,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Prepare Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android platform
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Android SDK packages
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -1)
+          echo "sdkmanager=$SDKMANAGER"
+          "$SDKMANAGER" --install 'platforms;android-35' 'build-tools;35.0.0'
       - name: Build debug APK
         working-directory: chatwoot-android
         run: gradle :app:assembleDebug --no-daemon
