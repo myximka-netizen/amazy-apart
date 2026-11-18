@@ -1,0 +1,39 @@
+name: Build Волшебно тут CRM APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [chatwoot-mobile-client]
+    paths:
+      - 'chatwoot-android/**'
+      - '.github/workflows/build-chatwoot-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Prepare Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android platform
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Build debug APK
+        working-directory: chatwoot-android
+        run: gradle :app:assembleDebug --no-daemon
+      - name: Publish APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Volshebno-Tut-CRM-APK
+          path: chatwoot-android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
