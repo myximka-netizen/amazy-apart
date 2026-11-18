@@ -1,4 +1,4 @@
-name: Build Волшебно тут CRM APK
+name: Build and test Volshebno Tut CRM APK
 on:
   workflow_dispatch:
   push:
@@ -26,16 +26,41 @@ jobs:
           gradle-version: '8.10.2'
       - name: Android SDK packages
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
           SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -1)
-          echo "sdkmanager=$SDKMANAGER"
           "$SDKMANAGER" --install 'platforms;android-35' 'build-tools;35.0.0'
       - name: Build debug APK
         working-directory: chatwoot-android
         run: gradle :app:assembleDebug --no-daemon
-      - name: Publish APK
+      - name: Verify APK cryptographic signature and Android manifest
+        run: |
+          APK=chatwoot-android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -25
+      - name: Enable KVM for Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Android emulator install and launch smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb install -r chatwoot-android/app/build/outputs/apk/debug/app-debug.apk
+            adb shell am start -W -n ru.amazy.crm/.MainActivity
+            sleep 5
+            adb shell dumpsys activity activities | grep -E 'ru.amazy.crm|mResumedActivity'
+            if adb logcat -d -t 1000 | grep -E 'FATAL EXCEPTION.*|Process: ru.amazy.crm'; then
+              echo "Potential fatal exception found in emulator logs"
+              exit 1
+            fi
+      - name: Publish install-tested APK
         uses: actions/upload-artifact@v4
         with:
-          name: Volshebno-Tut-CRM-APK
+          name: Volshebno-Tut-CRM-Android-tested-APK
           path: chatwoot-android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
