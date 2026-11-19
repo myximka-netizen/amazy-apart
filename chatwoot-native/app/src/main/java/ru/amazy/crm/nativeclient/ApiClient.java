@@ -164,7 +164,7 @@ final class ApiClient {
                 throw new ApiException(code, "Нет доступа (HTTP " + code + "). Проверь токен и аккаунт Chatwoot.");
             if (code < 200 || code >= 300)
                 throw new ApiException(code, "Сервер вернул HTTP " + code + (code >= 500 ? ". Попробуй позднее." : ". Проверь запрос."));
-            if (raw.isBlank()) return new JSONObject();
+            if (raw.isBlank() || "null".equals(raw.trim())) return new JSONObject();
             try {
                 if (raw.trim().startsWith("[")) {
                     JSONObject wrapped = new JSONObject();
