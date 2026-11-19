@@ -689,6 +689,13 @@ public final class MainActivity extends Activity {
         sp.leftMargin = dp(8);
         actions.addView(statusButton, sp);
         statusButton.setOnClickListener(v -> chooseStatus());
+        Button more = button("⋮", false);
+        more.setContentDescription("Действия Chatwoot: оператор, приоритет, готовые ответы");
+        LinearLayout.LayoutParams moreParams = new LinearLayout.LayoutParams(dp(44), dp(44));
+        moreParams.leftMargin = dp(7);
+        actions.addView(more, moreParams);
+        more.setOnClickListener(v ->
+            ChatActions.show(this, api, currentConversation, currentName, draft, () -> loadMessages(true)));
         header.addView(actions);
         root.addView(header);
 
