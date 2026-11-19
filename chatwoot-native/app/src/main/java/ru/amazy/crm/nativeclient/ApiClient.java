@@ -1,6 +1,7 @@
 package ru.amazy.crm.nativeclient;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,9 +53,40 @@ final class ApiClient {
     JSONObject profile() throws IOException { return request("GET", "/api/v1/profile", null); }
 
     JSONObject conversations(String status, int page, String search) throws IOException {
-        String path = accountPath() + "/conversations?status=" + encode(status) + "&page=" + page;
+        return conversations(status, page, search, "all");
+    }
+
+    JSONObject conversations(String status, int page, String search, String assigneeType) throws IOException {
+        String path = accountPath() + "/conversations?status=" + encode(status) + "&page=" + page
+            + "&assignee_type=" + encode(assigneeType);
         if (search != null && !search.isBlank()) path += "&q=" + encode(search);
         return request("GET", path, null);
+    }
+
+    JSONObject conversation(int conversationId) throws IOException {
+        return request("GET", accountPath() + "/conversations/" + conversationId, null);
+    }
+
+    JSONArray cannedResponses() throws IOException {
+        return request("GET", accountPath() + "/canned_responses", null).optJSONArray("_array");
+    }
+
+    JSONArray agents() throws IOException {
+        return request("GET", accountPath() + "/agents", null).optJSONArray("_array");
+    }
+
+    JSONObject assign(int conversationId, int agentId) throws IOException {
+        JSONObject body = new JSONObject();
+        try { body.put("assignee_id", agentId > 0 ? agentId : JSONObject.NULL); }
+        catch (Exception ex) { throw new IOException(ex); }
+        return request("POST", accountPath() + "/conversations/" + conversationId + "/assignments", body);
+    }
+
+    JSONObject setPriority(int conversationId, String priority) throws IOException {
+        JSONObject body = new JSONObject();
+        try { body.put("priority", priority); }
+        catch (Exception ex) { throw new IOException(ex); }
+        return request("POST", accountPath() + "/conversations/" + conversationId + "/toggle_priority", body);
     }
 
     JSONObject messages(int conversationId) throws IOException {
@@ -119,7 +151,7 @@ final class ApiClient {
             conn.setRequestMethod(method);
             conn.setRequestProperty("api_access_token", accessToken);
             conn.setRequestProperty("Accept", "application/json");
-            conn.setRequestProperty("User-Agent", "VolshebnoTutNativeCRM/0.2");
+            conn.setRequestProperty("User-Agent", "VolshebnoTutNativeCRM/0.5");
             if (body != null) {
                 conn.setDoOutput(true);
                 conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
@@ -133,8 +165,16 @@ final class ApiClient {
             if (code < 200 || code >= 300)
                 throw new ApiException(code, "Сервер вернул HTTP " + code + (code >= 500 ? ". Попробуй позднее." : ". Проверь запрос."));
             if (raw.isBlank()) return new JSONObject();
-            try { return new JSONObject(raw); }
-            catch (Exception ex) { throw new IOException("Сервер вернул неожиданный формат ответа", ex); }
+            try {
+                if (raw.trim().startsWith("[")) {
+                    JSONObject wrapped = new JSONObject();
+                    wrapped.put("_array", new JSONArray(raw));
+                    return wrapped;
+                }
+                return new JSONObject(raw);
+            } catch (Exception ex) {
+                throw new IOException("Сервер вернул неожиданный формат ответа", ex);
+            }
         } catch (java.net.SocketTimeoutException ex) {
             throw new IOException("Превышено время ожидания сервера. Проверь Happ или подключение к Chatwoot.", ex);
         } catch (java.net.UnknownHostException ex) {
