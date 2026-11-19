@@ -193,6 +193,7 @@ public final class MainActivity extends Activity {
         privateNote = null;
         sendButton = null;
         statusButton = null;
+        loadingMessages = false;
     }
 
     private void showError(String message) {
@@ -308,6 +309,12 @@ public final class MainActivity extends Activity {
         LinearLayout actionRow = row();
         actionRow.addView(text("Все каналы в одном месте", 14, Color.WHITE, false),
             new LinearLayout.LayoutParams(0, dp(44), 1));
+        Button refresh = button("↻", false);
+        refresh.setContentDescription("Обновить диалоги");
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(dp(48), dp(44));
+        rp.rightMargin = dp(7);
+        actionRow.addView(refresh, rp);
+        refresh.setOnClickListener(v -> loadConversations());
         Button settings = button("⚙", false);
         settings.setContentDescription("Настройки соединения");
         actionRow.addView(settings, new LinearLayout.LayoutParams(dp(48), dp(44)));
