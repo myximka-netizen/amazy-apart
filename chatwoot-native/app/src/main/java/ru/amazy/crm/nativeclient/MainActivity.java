@@ -30,9 +30,6 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -44,7 +41,6 @@ import java.util.concurrent.Executors;
  * No WebView is instantiated anywhere.
  */
 public final class MainActivity extends Activity {
-    private static final int PICK_FIREBASE_CONFIG = 33004;
     private static final int NOTIFICATION_PERMISSION = 33005;
     private static final int NAVY = Color.rgb(24, 42, 82);
     private static final int BLUE = Color.rgb(56, 91, 206);
@@ -542,9 +538,13 @@ public final class MainActivity extends Activity {
             .setTitle("Подключение и уведомления")
             .setMessage("Сервер: " + credentials.server() + "\\nАккаунт: #" + account +
                 "\\n\\n" + PushBridge.status(this) +
-                "\\n\\nДля отправки push Chatwoot должен иметь Firebase Project ID и Firebase Credentials.")
+                "\\n\\nСервер Chatwoot также должен иметь FIREBASE_PROJECT_ID и FIREBASE_CREDENTIALS.")
             .setPositiveButton("Закрыть", (d, w) -> d.dismiss())
-            .setNeutralButton("Настроить Push", (d, w) -> pickFirebaseConfiguration())
+            .setNeutralButton("Проверить Push", (d, w) -> {
+                requestPushPermission();
+                PushBridge.onLogin(this);
+                showError("Повторно проверяем Firebase и регистрацию Chatwoot");
+            })
             .setNegativeButton("Сменить подключение", (d, w) -> {
                 PushBridge.unregisterBeforeLogout(this);
                 credentials.clear();
@@ -554,46 +554,11 @@ public final class MainActivity extends Activity {
             .show();
     }
 
-    private void pickFirebaseConfiguration() {
-        try {
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("*/*");
-            startActivityForResult(intent, PICK_FIREBASE_CONFIG);
-        } catch (Exception ex) {
-            showError("Не удалось открыть выбор файла");
-        }
-    }
-
     private void requestPushPermission() {
         if (!PushBridge.isConfigured(this)) return;
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{ Manifest.permission.POST_NOTIFICATIONS }, NOTIFICATION_PERMISSION);
-        }
-    }
-
-    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != PICK_FIREBASE_CONFIG || resultCode != RESULT_OK || data == null || data.getData() == null) return;
-        try (InputStream input = getContentResolver().openInputStream(data.getData());
-             ByteArrayOutputStream bytes = new ByteArrayOutputStream()) {
-            if (input == null) throw new IllegalArgumentException("Не удалось прочитать файл");
-            byte[] buffer = new byte[4096];
-            int n;
-            while ((n = input.read(buffer)) != -1) {
-                if (bytes.size() + n > 100_000) throw new IllegalArgumentException("Слишком большой файл конфигурации");
-                bytes.write(buffer, 0, n);
-            }
-            PushBridge.importGoogleServices(this, bytes.toString(StandardCharsets.UTF_8));
-            requestPushPermission();
-            PushBridge.onLogin(this);
-            new AlertDialog.Builder(this).setTitle("Firebase подключён")
-                .setMessage("Настройки приложения сохранены. Теперь задай Firebase Project ID и Firebase Credentials на сервере Chatwoot, иначе push не будут доставляться.")
-                .setPositiveButton("Понятно", null).show();
-        } catch (Exception ex) {
-            new AlertDialog.Builder(this).setTitle("Не удалось настроить push")
-                .setMessage(ex.getMessage()).setPositiveButton("Понятно", null).show();
         }
     }
 

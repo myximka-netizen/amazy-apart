@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "968312842566",
+    "project_id": "volshebno-tut-crm",
+    "storage_bucket": "volshebno-tut-crm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:968312842566:android:3e08e3326243c7e66e1d47",
+        "android_client_info": {
+          "package_name": "ru.amazy.crm.nativeclient"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7hnyqu221mHm8diSzfgtCOknrUOb-zww"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
