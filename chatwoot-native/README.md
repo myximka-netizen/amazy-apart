@@ -1,40 +1,58 @@
-# Волшебно тут CRM Native
+# Волшебно тут CRM Native · v0.5
 
-Independent **native Android** Chatwoot client (no WebView). Built-in FCM push is based on the Chatwoot subscription API.
+Independent **native Android** Chatwoot client (no WebView). Uses the Chatwoot Application API and Firebase Cloud Messaging.
 
-## Build configuration
-- Firebase project: `volshebno-tut-crm`.
-- Android package ID: `ru.amazy.crm.nativeclient`.
-- App uses the official Google Services Gradle plugin, processing `app/google-services.json` at build time.
-- `google-services.json` has **public client identifiers only**. Do not commit private service-account JSON, Chatwoot access tokens or passwords.
-- Build with Java 17 and Gradle 8.10.2: `gradle :app:assembleDebug`.
-- CI: `.github/workflows/build-chatwoot-native-apk.yml`.
+## Features
+
+- Chatwoot-inspired conversation list, contact avatar, channel, last message, status, unread counter, labels and assigned operator.
+- Scope filters: Mine / Unassigned / All; status filters: Open / Pending / Resolved / All; full-text message search and pagination.
+- Automatic conversation list refresh every 15 seconds while in foreground. Refresh also runs immediately when the app reopens.
+- Automatic foreground message refresh every 15 seconds without forcibly scrolling away from older messages.
+- Native reply, internal note, attachments (open links), mark read, status Open / Pending / Resolved.
+- Actions menu: contact details, operator assignment, priority and canned replies (insert into composer, never auto-send).
+- Push subscription through FCM; on-device push registration status available from settings. **Foreground polling is not a replacement for background FCM.**
+- Chatwoot access token encrypted by Android Keystore; HTTPS-only API.
+- Android package ID `ru.amazy.crm.nativeclient`.
+
+## Build
+
+- JDK 17, Gradle 8.10.2, Android SDK 35.
+- Firebase public `app/google-services.json` is processed with the Google Services plugin.
+- Build debug locally with `gradle :app:assembleDebug`.
+- CI workflow: `.github/workflows/build-chatwoot-native-apk.yml`.
+- CI installs and starts the debug APK in an Android 15 emulator.
+- Release version 0.5.0 (`versionCode 4`).
+
+## Permanent signing for in-place updates
+
+**Never commit the signing keystore or password to GitHub. The repository is public.**
+
+Use one long-lived, backed-up signing keystore (alias: `amazy_crm`). In GitHub Repository Settings → Secrets and variables → Actions, create these two repository secrets:
+
+- `AMAZY_ANDROID_KEYSTORE_B64`: Base64 of the raw signing keystore file, **one line, no whitespace**.
+- `AMAZY_ANDROID_KEYSTORE_PASSWORD`: password for the keystore and its key.
+
+The workflow decodes the keystore into a temporary file, signs the release APK, verifies its signature, deletes the local file and uploads artifact **Volshebno-Tut-CRM-v0.5-Signed-APK**. A debug APK is also built for emulator verification.
+
+Without both signing secrets, CI builds and tests the debug APK only and prints a warning. Debug signatures from ephemeral GitHub runners **are not guaranteed stable across runs**.
+
+The already-installed v0.4 debug APK cannot be upgraded in place using a new release signer. Android requires an APK with the same signing certificate. **Save the Chatwoot access token locally; uninstall old debug v0.4 once before installing the first stable signed release.** Subsequent signed releases with the same keystore will install on top, keeping app data.
+
+Keep offline backups of the signing keystore and password. Losing the key prevents normal in-place updates of apps signed by it.
+
+## Required server configuration for push
+
+FCM will not be delivered end-to-end until the Chatwoot server is configured with:
+- `FIREBASE_PROJECT_ID=volshebno-tut-crm`
+- `FIREBASE_CREDENTIALS`: private Firebase service-account JSON (server only)
+- Chatwoot user notification preferences enabled, and outbound Google FCM network connectivity.
+
+Client Firebase configuration alone cannot prove that server-side push works. The Android device needs Google Play Services and access to Google FCM.
 
 ## Mobile setup
-1. Install the version 0.4 APK. Old debug builds may use a different signing key, so you may need to uninstall v0.3 first.
-2. Enter your Chatwoot HTTPS base URL and account ID (existing account: 2).
-3. Enter your personal Chatwoot **API access token directly on the phone**. Do not share the token in a chat.
-4. Allow Android notification permission. Firebase is already configured in the APK; **do not import files**.
-5. In ⚙ > Подключение и уведомления, check registration status. "Проверить Push" retries token registration if needed.
 
-## Required server configuration
-FCM notifications will **not** arrive from Chatwoot until the Chatwoot server is configured with:
-- `FIREBASE_PROJECT_ID` = `volshebno-tut-crm`
-- `FIREBASE_CREDENTIALS` = private Firebase service-account JSON (server only). On a supported Chatwoot version, configure via super_admin app config.
-- Account notification preferences enabling push for assigned / participating messages.
-- Outbound access from Rails/Sidekiq to Google OAuth and FCM endpoints.
-
-Chatwoot itself handles native FCM push via `POST /api/v1/notification_subscriptions`; no separate push forwarding service is required.
-The phone needs Google Play Services and a network path to Google FCM. Network/VPN restrictions may affect push delivery.
-
-## Current MVP
-- Conversation list + filters/search + unread count
-- Native messages and replies, internal notes
-- Conversation status changes and read marking
-- FCM device registration and message notifications (once server is configured)
-- Encrypted personal token via Android Keystore
-- No image attachment sends, full paging, or background refresh via WebView
-
-## Testing notes
-CI builds, installs, and launches the APK in an Android emulator.
-**End-to-end FCM message delivery from the user's Chatwoot server has not been verified** until server configuration and a real-device test.
+1. Install the **signed release** artifact from GitHub Actions after configuring signing.
+2. Enter Chatwoot HTTPS base URL, account ID 2, and the personal API Access Token on the phone.
+3. Grant Android notification permission.
+4. Go to ⚙ → Подключение и уведомления to inspect push registration status.
+5. Send a message to the connected Telegram Business account from another Telegram account. The conversation list should update on its own while the app is open.
