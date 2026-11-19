@@ -28,20 +28,42 @@ jobs:
         run: |
           SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -1)
           "$SDKMANAGER" --install 'platforms;android-35' 'build-tools;35.0.0'
-      - name: Compile native APK
+      - name: Compile native debug APK for emulator
         working-directory: chatwoot-native
         run: gradle :app:assembleDebug --no-daemon
-      - name: Check APK signature and package
+      - name: Check debug APK package
         run: |
           APK=chatwoot-native/app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -22
+      - name: Build stable signed release APK
+        env:
+          SIGNING_KEY_BASE64: ${{ secrets.AMAZY_ANDROID_KEYSTORE_B64 }}
+          SIGNING_PASSWORD: ${{ secrets.AMAZY_ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$SIGNING_KEY_BASE64" ] || [ -z "$SIGNING_PASSWORD" ]; then
+            echo "::warning::No stable signing secrets. Build is verified, but only debug APK is available."
+            exit 0
+          fi
+          umask 077
+          printf '%s' "$SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/amazy-release.jks"
+          export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/amazy-release.jks"
+          export ANDROID_KEYSTORE_PASSWORD="$SIGNING_PASSWORD"
+          export ANDROID_KEY_ALIAS="amazy_crm"
+          export ANDROID_KEY_PASSWORD="$SIGNING_PASSWORD"
+          cd chatwoot-native
+          gradle :app:assembleRelease --no-daemon
+          RELEASE=app/build/outputs/apk/release/app-release.apk
+          test -s "$RELEASE"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$RELEASE"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$RELEASE" | head -16
+          rm -f "$RUNNER_TEMP/amazy-release.jks"
       - name: Enable emulator virtualization
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Install and launch APK on Android 15
+      - name: Install and launch on Android 15 emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -54,9 +76,16 @@ jobs:
             adb shell am start -W -n ru.amazy.crm.nativeclient/.MainActivity
             sleep 5
             adb shell pidof ru.amazy.crm.nativeclient
-      - name: Upload tested APK
+      - name: Upload emulator-tested debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: Volshebno-Tut-CRM-Native-APK
+          name: Volshebno-Tut-CRM-v0.5-Debug-APK
           path: chatwoot-native/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+      - name: Upload stable signed release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Volshebno-Tut-CRM-v0.5-Signed-APK
+          path: chatwoot-native/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: ignore
           retention-days: 30
