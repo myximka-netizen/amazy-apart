@@ -6,7 +6,7 @@ plugins {
 def signingFile = System.getenv('ANDROID_KEYSTORE_FILE')
 def signingPassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
 def signingAlias = System.getenv('ANDROID_KEY_ALIAS') ?: 'amazy_crm'
-def keyPassword = System.getenv('ANDROID_KEY_PASSWORD') ?: signingPassword
+def signingKeyPassword = System.getenv('ANDROID_KEY_PASSWORD') ?: signingPassword
 
 android {
     namespace 'ru.amazy.crm.nativeclient'
@@ -24,7 +24,7 @@ android {
                 storeFile file(signingFile)
                 storePassword signingPassword
                 keyAlias signingAlias
-                keyPassword keyPassword
+                keyPassword signingKeyPassword
             }
         }
     }
