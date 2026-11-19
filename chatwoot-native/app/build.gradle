@@ -2,6 +2,12 @@ plugins {
     id 'com.android.application'
     id 'com.google.gms.google-services'
 }
+
+def signingFile = System.getenv('ANDROID_KEYSTORE_FILE')
+def signingPassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
+def signingAlias = System.getenv('ANDROID_KEY_ALIAS') ?: 'amazy_crm'
+def keyPassword = System.getenv('ANDROID_KEY_PASSWORD') ?: signingPassword
+
 android {
     namespace 'ru.amazy.crm.nativeclient'
     compileSdk 35
@@ -9,8 +15,26 @@ android {
         applicationId 'ru.amazy.crm.nativeclient'
         minSdk 26
         targetSdk 35
-        versionCode 3
-        versionName '0.4.0-firebase'
+        versionCode 4
+        versionName '0.5.0'
+    }
+    signingConfigs {
+        stableRelease {
+            if (signingFile && signingPassword) {
+                storeFile file(signingFile)
+                storePassword signingPassword
+                keyAlias signingAlias
+                keyPassword keyPassword
+            }
+        }
+    }
+    buildTypes {
+        release {
+            // Production releases use one stable key from GitHub Actions Secrets.
+            // No private signing material is committed to this public repository.
+            minifyEnabled false
+            signingConfig signingConfigs.stableRelease
+        }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -18,8 +42,8 @@ android {
     }
 }
 
-// Firebase client identifiers are embedded at build time from app/google-services.json.
-// Never include server-side Firebase service account credentials in this module.
+// Firebase public Android client configuration comes from app/google-services.json.
+// Never embed Firebase service-account keys, Chatwoot tokens or signing secrets.
 dependencies {
     implementation 'com.google.firebase:firebase-messaging:26.0.2'
 }
