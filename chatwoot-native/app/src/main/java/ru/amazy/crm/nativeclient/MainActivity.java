@@ -42,22 +42,27 @@ import java.util.concurrent.Executors;
  */
 public final class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION = 33005;
-    private static final int NAVY = Color.rgb(24, 42, 82);
-    private static final int BLUE = Color.rgb(56, 91, 206);
-    private static final int PALE = Color.rgb(243, 246, 252);
-    private static final int BORDER = Color.rgb(225, 231, 241);
-    private static final int SECONDARY = Color.rgb(104, 117, 142);
-    private static final int GREEN = Color.rgb(30, 132, 92);
+    // Chatwoot-inspired visual system: quiet white surfaces, slate text, bright blue actions.
+    private static final int NAVY = Color.rgb(31, 41, 55);
+    private static final int BLUE = Color.rgb(31, 147, 255);
+    private static final int PALE = Color.rgb(248, 250, 252);
+    private static final int BORDER = Color.rgb(226, 232, 240);
+    private static final int SECONDARY = Color.rgb(100, 116, 139);
+    private static final int GREEN = Color.rgb(22, 163, 74);
+    private static final int AUTO_REFRESH_MS = 15000;
     private static final int NOTE = Color.rgb(255, 245, 211);
 
     private enum Screen { LOGIN, LIST, CHAT }
     private Screen screen = Screen.LOGIN;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
+    // Poll while visible; FCM still handles background notifications independently.
     private final Runnable foregroundRefresh = new Runnable() {
         @Override public void run() {
-            if (foreground && screen == Screen.CHAT && currentConversation > 0) loadMessages(false);
-            if (foreground) main.postDelayed(this, 25000);
+            if (!foreground) return;
+            if (screen == Screen.LIST) loadConversations(false);
+            else if (screen == Screen.CHAT && currentConversation > 0) loadMessages(false);
+            main.postDelayed(this, AUTO_REFRESH_MS);
         }
     };
 
@@ -69,7 +74,13 @@ public final class MainActivity extends Activity {
     private int account = 2;
     private int page = 1;
     private String filterStatus = "open";
+    private String assigneeType = "all";
     private String query = "";
+    private boolean listLoading = false;
+    private String lastListFingerprint = "";
+    private String lastMessageFingerprint = "";
+    private ScrollView conversationScroll;
+    private TextView syncLabel;
     private int currentConversation = -1;
     private String currentName = "";
     private String currentStatus = "open";
@@ -84,9 +95,10 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        getWindow().setStatusBarColor(NAVY);
+        getWindow().setStatusBarColor(Color.WHITE);
         getWindow().setNavigationBarColor(Color.WHITE);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        getWindow().getDecorView().setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         root = column();
         root.setBackgroundColor(Color.WHITE);
         setContentView(root);
@@ -109,7 +121,7 @@ public final class MainActivity extends Activity {
         super.onResume();
         foreground = true;
         main.removeCallbacks(foregroundRefresh);
-        main.postDelayed(foregroundRefresh, 25000);
+        main.post(foregroundRefresh);
     }
 
     @Override protected void onPause() {
@@ -196,6 +208,11 @@ public final class MainActivity extends Activity {
         messageScroll = null;
         messageContainer = null;
         conversationContainer = null;
+        conversationScroll = null;
+        syncLabel = null;
+        listLoading = false;
+        lastListFingerprint = "";
+        lastMessageFingerprint = "";
         draft = null;
         privateNote = null;
         sendButton = null;
@@ -298,13 +315,13 @@ public final class MainActivity extends Activity {
 
     private LinearLayout toolbar(String title, String subtitle) {
         LinearLayout shell = column();
-        shell.setPadding(dp(17), dp(14), dp(16), dp(12));
-        shell.setBackgroundColor(NAVY);
-        TextView header = text(title, 21, Color.WHITE, true);
+        shell.setPadding(dp(17), dp(15), dp(16), dp(13));
+        shell.setBackgroundColor(Color.WHITE);
+        TextView header = text(title, 22, NAVY, true);
         shell.addView(header);
         if (subtitle != null && !subtitle.isEmpty()) {
-            paddingView(shell, 5);
-            shell.addView(text(subtitle, 12, Color.rgb(205, 218, 248), false));
+            paddingView(shell, 3);
+            shell.addView(text(subtitle, 12, SECONDARY, false));
         }
         return shell;
     }
@@ -314,22 +331,25 @@ public final class MainActivity extends Activity {
         screen = Screen.LIST;
         currentConversation = -1;
         clear();
-        LinearLayout header = toolbar("Волшебно тут", "Диалоги гостей · Chatwoot #" + account);
+        LinearLayout header = toolbar("Диалоги", "Волшебно тут · Chatwoot");
         LinearLayout actionRow = row();
-        actionRow.addView(text("Все каналы в одном месте", 14, Color.WHITE, false),
-            new LinearLayout.LayoutParams(0, dp(44), 1));
+        syncLabel = text("● Автообновление каждые 15 сек.", 12, GREEN, false);
+        actionRow.addView(syncLabel, new LinearLayout.LayoutParams(0, dp(42), 1));
         Button refresh = button("↻", false);
-        refresh.setContentDescription("Обновить диалоги");
-        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(dp(48), dp(44));
+        refresh.setContentDescription("Обновить список сейчас");
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(dp(48), dp(42));
         rp.rightMargin = dp(7);
         actionRow.addView(refresh, rp);
-        refresh.setOnClickListener(v -> loadConversations());
+        refresh.setOnClickListener(v -> loadConversations(true));
         Button settings = button("⚙", false);
-        settings.setContentDescription("Настройки соединения");
-        actionRow.addView(settings, new LinearLayout.LayoutParams(dp(48), dp(44)));
+        settings.setContentDescription("Подключение и уведомления");
+        actionRow.addView(settings, new LinearLayout.LayoutParams(dp(48), dp(42)));
         settings.setOnClickListener(v -> showSettings());
         header.addView(actionRow);
         root.addView(header);
+        View headLine = new View(this);
+        headLine.setBackgroundColor(BORDER);
+        root.addView(headLine, new LinearLayout.LayoutParams(-1, dp(1)));
 
         HorizontalScrollView horizontal = new HorizontalScrollView(this);
         horizontal.setHorizontalScrollBarEnabled(false);
@@ -341,6 +361,13 @@ public final class MainActivity extends Activity {
         addTab(tabs, "Все", "all");
         horizontal.addView(tabs);
         root.addView(horizontal);
+
+        LinearLayout assignmentTabs = row();
+        assignmentTabs.setPadding(dp(12), dp(1), dp(12), dp(5));
+        addScopeTab(assignmentTabs, "Мои", "me");
+        addScopeTab(assignmentTabs, "Без оператора", "unassigned");
+        addScopeTab(assignmentTabs, "Все", "all");
+        root.addView(assignmentTabs);
 
         LinearLayout search = row();
         search.setPadding(dp(15), dp(3), dp(15), dp(12));
@@ -368,12 +395,12 @@ public final class MainActivity extends Activity {
         divider.setBackgroundColor(BORDER);
         root.addView(divider, new LinearLayout.LayoutParams(-1, dp(1)));
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
+        conversationScroll = new ScrollView(this);
+        conversationScroll.setFillViewport(true);
         conversationContainer = column();
         conversationContainer.setBackgroundColor(Color.WHITE);
-        scroll.addView(conversationContainer);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        conversationScroll.addView(conversationContainer);
+        root.addView(conversationScroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
         LinearLayout footer = row();
         footer.setPadding(dp(15), dp(7), dp(15), dp(9));
@@ -388,7 +415,21 @@ public final class MainActivity extends Activity {
         footer.addView(next, new LinearLayout.LayoutParams(dp(108), dp(43)));
         next.setOnClickListener(v -> { page++; loadConversations(); });
         root.addView(footer);
-        loadConversations();
+        loadConversations(true);
+    }
+
+    private void addScopeTab(LinearLayout tabs, String label, String scope) {
+        Button chip = button(label, scope.equals(assigneeType));
+        chip.setTextSize(12);
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-2, dp(37));
+        p.rightMargin = dp(7);
+        tabs.addView(chip, p);
+        chip.setOnClickListener(v -> {
+            if (assigneeType.equals(scope)) return;
+            assigneeType = scope;
+            page = 1;
+            showList();
+        });
     }
 
     private void addTab(LinearLayout tabs, String label, String status) {
@@ -405,33 +446,58 @@ public final class MainActivity extends Activity {
         });
     }
 
-    private void loadConversations() {
-        if (conversationContainer == null || screen != Screen.LIST) return;
+    private void loadConversations() { loadConversations(true); }
+
+    private void loadConversations(boolean indicate) {
+        if (conversationContainer == null || screen != Screen.LIST || listLoading) return;
+        listLoading = true;
         final int request = ++generation;
-        conversationContainer.removeAllViews();
-        TextView loading = text("Загружаем диалоги…", 15, SECONDARY, false);
-        loading.setGravity(Gravity.CENTER);
-        conversationContainer.addView(loading, new LinearLayout.LayoutParams(-1, dp(160)));
+        final int scrollY = conversationScroll == null ? 0 : conversationScroll.getScrollY();
+        final boolean showSpinner = indicate && lastListFingerprint.isEmpty();
+        if (showSpinner) {
+            conversationContainer.removeAllViews();
+            TextView loading = text("Загружаем диалоги…", 14, SECONDARY, false);
+            loading.setGravity(Gravity.CENTER);
+            conversationContainer.addView(loading, new LinearLayout.LayoutParams(-1, dp(120)));
+        }
+        if (syncLabel != null) syncLabel.setText("↻ Синхронизация…");
         final int requestedPage = page;
         final String requestedStatus = filterStatus;
         final String requestedQuery = query;
+        final String requestedAssignee = assigneeType;
         worker.execute(() -> {
             try {
-                JSONObject result = api.conversations(requestedStatus, requestedPage, requestedQuery);
+                JSONObject result = api.conversations(requestedStatus, requestedPage, requestedQuery, requestedAssignee);
                 main.post(() -> {
                     if (screen != Screen.LIST || generation != request || conversationContainer == null) return;
-                    renderConversations(result);
+                    listLoading = false;
+                    String fingerprint = requestedPage + ":" + requestedStatus + ":" +
+                        requestedQuery + ":" + requestedAssignee + ":" + result.toString();
+                    if (!fingerprint.equals(lastListFingerprint) || indicate) {
+                        renderConversations(result);
+                        if (!lastListFingerprint.isEmpty() && conversationScroll != null) {
+                            conversationScroll.post(() -> conversationScroll.scrollTo(0, scrollY));
+                        }
+                        lastListFingerprint = fingerprint;
+                    }
+                    if (syncLabel != null)
+                        syncLabel.setText("● Обновлено в " + new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date())
+                            + " · каждые 15 сек.");
                 });
             } catch (Exception ex) {
                 main.post(() -> {
                     if (screen != Screen.LIST || generation != request || conversationContainer == null) return;
-                    conversationContainer.removeAllViews();
-                    TextView err = text(ex.getMessage(), 15, Color.rgb(179, 45, 62), false);
-                    err.setPadding(dp(18), dp(28), dp(18), dp(18));
-                    conversationContainer.addView(err);
-                    Button retry = button("Повторить", true);
-                    conversationContainer.addView(retry, new LinearLayout.LayoutParams(-1, dp(52)));
-                    retry.setOnClickListener(v -> loadConversations());
+                    listLoading = false;
+                    if (syncLabel != null) syncLabel.setText("● Нет связи · повтор через 15 сек.");
+                    if (lastListFingerprint.isEmpty()) {
+                        conversationContainer.removeAllViews();
+                        TextView err = text(ex.getMessage(), 15, Color.rgb(179, 45, 62), false);
+                        err.setPadding(dp(18), dp(28), dp(18), dp(18));
+                        conversationContainer.addView(err);
+                        Button retry = button("Повторить", true);
+                        conversationContainer.addView(retry, new LinearLayout.LayoutParams(-1, dp(52)));
+                        retry.setOnClickListener(v -> loadConversations(true));
+                    }
                 });
             }
         });
@@ -471,17 +537,21 @@ public final class MainActivity extends Activity {
             String preview = recent == null ? "Нет текста последнего сообщения" : recent.optString("content", "");
             if (preview.isBlank()) preview = "Вложение или системное сообщение";
             long ts = item.optLong("last_activity_at", 0L);
-            addConversationRow(id, name, convStatus, preview, unread, inbox, ts);
+            String channel = meta == null ? "" : meta.optString("channel", "");
+            JSONObject assignee = meta == null ? null : meta.optJSONObject("assignee");
+            String agent = assignee == null ? "" : assignee.optString("name", "");
+            JSONArray labels = item.optJSONArray("labels");
+            addConversationRow(id, name, convStatus, preview, unread, inbox, ts, channel, agent, labels);
         }
     }
 
-    private void addConversationRow(int id, String name, String status, String preview, int unread, int inbox, long timestamp) {
+    private void addConversationRow(int id, String name, String status, String preview, int unread, int inbox, long timestamp, String channel, String agent, JSONArray labels) {
         LinearLayout row = row();
-        row.setPadding(dp(16), dp(15), dp(16), dp(15));
+        row.setPadding(dp(15), dp(13), dp(15), dp(13));
         row.setBackgroundColor(Color.WHITE);
         TextView avatar = text(name.substring(0, Math.min(1, name.length())).toUpperCase(Locale.ROOT), 20, BLUE, true);
         avatar.setGravity(Gravity.CENTER);
-        avatar.setBackground(bg(Color.rgb(234, 239, 255), 24));
+        avatar.setBackground(bg(Color.rgb(231, 244, 255), 24));
         row.addView(avatar, new LinearLayout.LayoutParams(dp(48), dp(48)));
         LinearLayout body = column();
         LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(0, -2, 1);
@@ -491,7 +561,10 @@ public final class MainActivity extends Activity {
         contact.setSingleLine(true);
         contact.setEllipsize(TextUtils.TruncateAt.END);
         body.addView(contact);
-        TextView info = text("Канал #" + inbox + " · " + displayStatus(status) + (timestamp > 0 ? " · " + stamp(timestamp) : ""), 12, SECONDARY, false);
+        String channelLabel = channel.contains("Telegram") ? "Telegram" :
+            channel.contains("Whatsapp") || channel.contains("WhatsApp") ? "WhatsApp" : "Канал #" + inbox;
+        String infoText = "#" + id + "  ·  " + channelLabel + "  ·  " + displayStatus(status);
+        TextView info = text(infoText, 12, SECONDARY, false);
         body.addView(info);
         TextView last = text(preview, 14, SECONDARY, false);
         last.setMaxLines(2);
@@ -499,13 +572,33 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.topMargin = dp(4);
         body.addView(last, lp);
+        if (!agent.isBlank() || (labels != null && labels.length() > 0)) {
+            String label = labels != null && labels.length() > 0 ? labels.optString(0, "") : "";
+            String metaText = (agent.isBlank() ? "" : "👤 " + agent) +
+                (label.isBlank() ? "" : (agent.isBlank() ? "" : " · ") + "🏷 " + label);
+            if (!metaText.isBlank()) {
+                TextView metaTextView = text(metaText, 11, SECONDARY, false);
+                LinearLayout.LayoutParams mp = new LinearLayout.LayoutParams(-1, -2);
+                mp.topMargin = dp(5);
+                body.addView(metaTextView, mp);
+            }
+        }
+        LinearLayout right = column();
+        right.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        row.addView(right, new LinearLayout.LayoutParams(-2, -2));
+        if (timestamp > 0) {
+            TextView at = text(stamp(timestamp), 11, SECONDARY, false);
+            at.setGravity(Gravity.RIGHT);
+            right.addView(at);
+        }
         if (unread > 0) {
             TextView count = text(Integer.toString(unread), 12, Color.WHITE, true);
             count.setGravity(Gravity.CENTER);
             count.setBackground(bg(GREEN, 18));
             LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(dp(31), dp(31));
             cp.leftMargin = dp(8);
-            row.addView(count, cp);
+            cp.topMargin = dp(8);
+            right.addView(count, cp);
         }
         conversationContainer.addView(row);
         View line = new View(this);
@@ -590,17 +683,18 @@ public final class MainActivity extends Activity {
         Button back = button("← Диалоги", false);
         actions.addView(back, new LinearLayout.LayoutParams(0, dp(44), 1));
         back.setOnClickListener(v -> showList());
-        statusButton = button(status.equals("resolved") ? "Открыть" : "Закрыть", false);
-        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(dp(110), dp(44));
+        statusButton = button("Статус: " + displayStatus(status) + " ▾", false);
+        statusButton.setTextSize(12);
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(dp(165), dp(44));
         sp.leftMargin = dp(8);
         actions.addView(statusButton, sp);
-        statusButton.setOnClickListener(v -> toggleStatus());
+        statusButton.setOnClickListener(v -> chooseStatus());
         header.addView(actions);
         root.addView(header);
 
         messageScroll = new ScrollView(this);
         messageScroll.setFillViewport(true);
-        messageScroll.setBackgroundColor(PALE);
+        messageScroll.setBackgroundColor(Color.rgb(246, 248, 251));
         messageContainer = column();
         messageContainer.setPadding(dp(12), dp(14), dp(12), dp(16));
         messageScroll.addView(messageContainer);
@@ -610,7 +704,7 @@ public final class MainActivity extends Activity {
         composer.setPadding(dp(12), dp(10), dp(12), dp(12));
         composer.setBackgroundColor(Color.WHITE);
         privateNote = new CheckBox(this);
-        privateNote.setText("Внутренняя заметка (не отправлять гостю)");
+        privateNote.setText("Внутренняя заметка · видна только команде");
         privateNote.setTextColor(NAVY);
         privateNote.setTextSize(13);
         composer.addView(privateNote);
@@ -668,6 +762,12 @@ public final class MainActivity extends Activity {
 
     private void renderMessages(JSONObject result) {
         if (messageContainer == null) return;
+        String fingerprint = result.toString();
+        if (fingerprint.equals(lastMessageFingerprint)) return;
+        boolean firstRender = lastMessageFingerprint.isEmpty();
+        boolean nearBottom = messageScroll == null || messageScroll.getChildAt(0) == null ||
+            messageScroll.getScrollY() >= messageScroll.getChildAt(0).getHeight() - messageScroll.getHeight() - dp(120);
+        lastMessageFingerprint = fingerprint;
         messageContainer.removeAllViews();
         JSONArray items = result.optJSONArray("payload");
         if (items == null) items = new JSONArray();
@@ -686,7 +786,8 @@ public final class MainActivity extends Activity {
             if (type == 2 && content.isBlank()) continue;
             addMessageBubble(content, type, note, m.optLong("created_at", 0), attachments);
         }
-        if (messageScroll != null) messageScroll.post(() -> messageScroll.fullScroll(View.FOCUS_DOWN));
+        if (messageScroll != null && (firstRender || nearBottom))
+            messageScroll.post(() -> messageScroll.fullScroll(View.FOCUS_DOWN));
     }
 
     private void addMessageBubble(String content, int type, boolean note, long created, JSONArray attachments) {
@@ -698,7 +799,7 @@ public final class MainActivity extends Activity {
         messageContainer.addView(line, lineParams);
         LinearLayout bubble = column();
         bubble.setPadding(dp(13), dp(10), dp(13), dp(10));
-        bubble.setBackground(bg(note ? NOTE : outgoing ? Color.rgb(222, 233, 255) : Color.WHITE, 15));
+        bubble.setBackground(bg(note ? NOTE : outgoing ? Color.rgb(222, 240, 255) : Color.WHITE, 15));
         line.addView(bubble, new LinearLayout.LayoutParams(-2, -2));
 
         if (note) bubble.addView(text("🔒 Внутренняя заметка", 11, Color.rgb(154, 107, 20), true));
@@ -766,9 +867,24 @@ public final class MainActivity extends Activity {
         });
     }
 
-    private void toggleStatus() {
+    private void chooseStatus() {
+        if (screen != Screen.CHAT || statusButton == null) return;
+        String[] options = {"Открыт", "Ожидание", "Закрыт"};
+        String[] values = {"open", "pending", "resolved"};
+        new AlertDialog.Builder(this)
+            .setTitle("Статус диалога")
+            .setSingleChoiceItems(options, currentStatus.equals("resolved") ? 2 :
+                currentStatus.equals("pending") ? 1 : 0, (dialog, which) -> {
+                dialog.dismiss();
+                setConversationStatus(values[which]);
+            })
+            .setNegativeButton("Отмена", null)
+            .show();
+    }
+
+    private void setConversationStatus(String next) {
         if (screen != Screen.CHAT || currentConversation < 1 || statusButton == null) return;
-        String next = currentStatus.equals("resolved") ? "open" : "resolved";
+        if (next.equals(currentStatus)) return;
         int id = currentConversation;
         int request = generation;
         statusButton.setEnabled(false);
@@ -779,8 +895,8 @@ public final class MainActivity extends Activity {
                     if (screen != Screen.CHAT || request != generation || currentConversation != id) return;
                     currentStatus = next;
                     statusButton.setEnabled(true);
-                    statusButton.setText(next.equals("resolved") ? "Открыть" : "Закрыть");
-                    showError(next.equals("resolved") ? "Диалог закрыт" : "Диалог открыт");
+                    statusButton.setText("Статус: " + displayStatus(next) + " ▾");
+                    showError("Статус изменён: " + displayStatus(next));
                 });
             } catch (Exception ex) {
                 main.post(() -> {
