@@ -631,7 +631,7 @@ public final class MainActivity extends Activity {
             .setTitle("Подключение и уведомления")
             .setMessage("Сервер: " + credentials.server() + "\\nАккаунт: #" + account +
                 "\\n\\n" + PushBridge.status(this) +
-                "\\n\\nСервер Chatwoot также должен иметь FIREBASE_PROJECT_ID и FIREBASE_CREDENTIALS.")
+                "\\n\\nВерсия 0.5.0 (сборка 4). Автообновление списка и переписки: каждые 15 секунд.\nДля Push сервер Chatwoot должен иметь FIREBASE_PROJECT_ID и FIREBASE_CREDENTIALS.")
             .setPositiveButton("Закрыть", (d, w) -> d.dismiss())
             .setNeutralButton("Проверить Push", (d, w) -> {
                 requestPushPermission();
