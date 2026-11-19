@@ -8,11 +8,17 @@ android {
         applicationId 'ru.amazy.crm.nativeclient'
         minSdk 26
         targetSdk 35
-        versionCode 1
-        versionName '0.2.0-native'
+        versionCode 2
+        versionName '0.3.0-native-push'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+// No google-services plugin required: FirebaseOptions initialized from imported
+// public client configuration at runtime. Private service credentials stay on server.
+dependencies {
+    implementation 'com.google.firebase:firebase-messaging:26.0.2'
 }

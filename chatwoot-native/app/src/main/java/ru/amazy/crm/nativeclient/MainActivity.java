@@ -1,13 +1,16 @@
 package ru.amazy.crm.nativeclient;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
@@ -27,6 +30,9 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -38,6 +44,8 @@ import java.util.concurrent.Executors;
  * No WebView is instantiated anywhere.
  */
 public final class MainActivity extends Activity {
+    private static final int PICK_FIREBASE_CONFIG = 33004;
+    private static final int NOTIFICATION_PERMISSION = 33005;
     private static final int NAVY = Color.rgb(24, 42, 82);
     private static final int BLUE = Color.rgb(56, 91, 206);
     private static final int PALE = Color.rgb(243, 246, 252);
@@ -94,6 +102,9 @@ public final class MainActivity extends Activity {
                 api = new ApiClient(credentials.server(), token, credentials.account());
                 account = credentials.account();
                 showList();
+                PushBridge.onLogin(this);
+                openPush(getIntent());
+                requestPushPermission();
             } catch (Exception ex) { showLogin(ex.getMessage()); }
         }
     }
@@ -274,6 +285,8 @@ public final class MainActivity extends Activity {
                         account = chosenAccount;
                         page = 1;
                         showList();
+                        PushBridge.onLogin(MainActivity.this);
+                        requestPushPermission();
                     });
                 } catch (Exception ex) {
                     main.post(() -> {
@@ -526,16 +539,78 @@ public final class MainActivity extends Activity {
 
     private void showSettings() {
         new AlertDialog.Builder(this)
-            .setTitle("Подключение")
-            .setMessage("Сервер: " + credentials.server() + "\nАккаунт: #" + account +
-                "\n\nТокен хранится в Android Keystore. Чтобы изменить сервер или токен, выйди из аккаунта.")
+            .setTitle("Подключение и уведомления")
+            .setMessage("Сервер: " + credentials.server() + "\\nАккаунт: #" + account +
+                "\\n\\n" + PushBridge.status(this) +
+                "\\n\\nДля отправки push Chatwoot должен иметь Firebase Project ID и Firebase Credentials.")
             .setPositiveButton("Закрыть", (d, w) -> d.dismiss())
+            .setNeutralButton("Настроить Push", (d, w) -> pickFirebaseConfiguration())
             .setNegativeButton("Сменить подключение", (d, w) -> {
+                PushBridge.unregisterBeforeLogout(this);
                 credentials.clear();
                 api = null;
                 showLogin("");
             })
             .show();
+    }
+
+    private void pickFirebaseConfiguration() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("*/*");
+            startActivityForResult(intent, PICK_FIREBASE_CONFIG);
+        } catch (Exception ex) {
+            showError("Не удалось открыть выбор файла");
+        }
+    }
+
+    private void requestPushPermission() {
+        if (!PushBridge.isConfigured(this)) return;
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{ Manifest.permission.POST_NOTIFICATIONS }, NOTIFICATION_PERMISSION);
+        }
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != PICK_FIREBASE_CONFIG || resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        try (InputStream input = getContentResolver().openInputStream(data.getData());
+             ByteArrayOutputStream bytes = new ByteArrayOutputStream()) {
+            if (input == null) throw new IllegalArgumentException("Не удалось прочитать файл");
+            byte[] buffer = new byte[4096];
+            int n;
+            while ((n = input.read(buffer)) != -1) {
+                if (bytes.size() + n > 100_000) throw new IllegalArgumentException("Слишком большой файл конфигурации");
+                bytes.write(buffer, 0, n);
+            }
+            PushBridge.importGoogleServices(this, bytes.toString(StandardCharsets.UTF_8));
+            requestPushPermission();
+            PushBridge.onLogin(this);
+            new AlertDialog.Builder(this).setTitle("Firebase подключён")
+                .setMessage("Настройки приложения сохранены. Теперь задай Firebase Project ID и Firebase Credentials на сервере Chatwoot, иначе push не будут доставляться.")
+                .setPositiveButton("Понятно", null).show();
+        } catch (Exception ex) {
+            new AlertDialog.Builder(this).setTitle("Не удалось настроить push")
+                .setMessage(ex.getMessage()).setPositiveButton("Понятно", null).show();
+        }
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        openPush(intent);
+    }
+
+    /** Open the specific native conversation from Chatwoot's FCM data payload. */
+    private void openPush(Intent intent) {
+        if (intent == null || api == null) return;
+        int id = PushBridge.conversationFromPayload(intent.getStringExtra("payload"), account);
+        if (id > 0) {
+            intent.removeExtra("payload"); // avoid reopening after rotation
+            showChat(id, "Диалог #" + id, "open");
+        }
     }
 
     private void showChat(int id, String name, String status) {

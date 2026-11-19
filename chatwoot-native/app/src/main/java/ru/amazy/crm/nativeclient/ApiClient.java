@@ -81,6 +81,28 @@ final class ApiClient {
         return request("POST", accountPath() + "/conversations/" + conversationId + "/update_last_seen", new JSONObject());
     }
 
+    /** Chatwoot already provides FCM push subscriptions for the signed-in user. */
+    JSONObject registerPushToken(String pushToken, String deviceId) throws IOException {
+        JSONObject attributes = new JSONObject();
+        JSONObject data = new JSONObject();
+        JSONObject body = new JSONObject();
+        try {
+            attributes.put("push_token", pushToken);
+            attributes.put("device_id", deviceId);
+            data.put("subscription_type", "fcm");
+            data.put("subscription_attributes", attributes);
+            body.put("notification_subscription", data);
+        } catch (Exception ex) { throw new IOException("Не удалось подготовить push-подписку", ex); }
+        return request("POST", "/api/v1/notification_subscriptions", body);
+    }
+
+    JSONObject unregisterPushToken(String pushToken) throws IOException {
+        JSONObject body = new JSONObject();
+        try { body.put("push_token", pushToken); }
+        catch (Exception ex) { throw new IOException(ex); }
+        return request("DELETE", "/api/v1/notification_subscriptions", body);
+    }
+
     private String accountPath() { return "/api/v1/accounts/" + account; }
 
     private static String encode(String s) {
