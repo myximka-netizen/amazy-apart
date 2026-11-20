@@ -541,25 +541,26 @@ public final class MainActivity extends Activity {
     }
 
     private void showFilterMenu() {
-        new AlertDialog.Builder(this).setTitle("Фильтры диалогов")
-            .setItems(new String[]{"Статус", "Ответственный", "Входящий канал", "Обновить список", "Сбросить фильтры"}, (d,w) -> {
+        String scope = "me".equals(assigneeType) ? "Мои" : "unassigned".equals(assigneeType) ? "Без оператора" : "Все";
+        String state = "all".equals(filterStatus) ? "Все" : displayStatus(filterStatus);
+        MobileSheet.show(this,"Фильтры диалогов",
+            new String[]{"Статус · "+state, "Ответственный · "+scope, "Канал · "+selectedInboxName,
+                "Обновить список", "Сбросить фильтры"}, w -> {
                 if (w == 0) {
                     String[] labels = {"Открытые", "Ожидание", "Отложенные", "Закрытые", "Все"};
                     String[] values = {"open", "pending", "snoozed", "resolved", "all"};
-                    new AlertDialog.Builder(this).setTitle("Статус").setItems(labels, (dd,i) -> {
-                        filterStatus = values[i]; page = 1; showList();
-                    }).show();
+                    for(int i=0;i<labels.length;i++)if(filterStatus.equals(values[i]))labels[i]="✓   "+labels[i];
+                    MobileSheet.show(this,"Статус",labels,i->{filterStatus=values[i];page=1;showList();});
                 } else if (w == 1) {
                     String[] values = {"me", "unassigned", "all"};
-                    new AlertDialog.Builder(this).setTitle("Ответственный")
-                        .setItems(new String[]{"Мои", "Без оператора", "Все"}, (dd,i) -> {
-                            assigneeType = values[i]; page = 1; showList();
-                        }).show();
+                    String[] labels={"Мои","Без оператора","Все"};
+                    for(int i=0;i<labels.length;i++)if(assigneeType.equals(values[i]))labels[i]="✓   "+labels[i];
+                    MobileSheet.show(this,"Ответственный",labels,i->{assigneeType=values[i];page=1;showList();});
                 } else if (w == 2) selectInbox();
                 else if (w == 3) loadConversations(true);
-                else { filterStatus = "open"; assigneeType = "all"; selectedInbox = 0;
-                    selectedInboxName = "Все каналы"; query = ""; page = 1; showList(); }
-            }).setNegativeButton("Закрыть", null).show();
+                else { filterStatus="open";assigneeType="all";selectedInbox=0;
+                    selectedInboxName="Все каналы";query="";page=1;showList(); }
+            });
     }
 
     private void addBottomNav(LinearLayout parent, String selection) {
@@ -1126,14 +1127,12 @@ public final class MainActivity extends Activity {
                 }
                 main.post(() -> {
                     if (screen != Screen.LIST || api != client || isFinishing()) return;
-                    new AlertDialog.Builder(this)
-                        .setTitle("Входящие каналы")
-                        .setItems(names.toArray(new String[0]), (d, which) -> {
+                    MobileSheet.show(this,"Входящие каналы",names.toArray(new String[0]),which -> {
                             selectedInbox = ids.get(which);
                             selectedInboxName = names.get(which);
                             page = 1;
                             showList();
-                        }).setNegativeButton("Отмена", null).show();
+                        });
                 });
             } catch (Exception ex) { main.post(() -> showError(ex.getMessage())); }
         });
@@ -1157,8 +1156,7 @@ public final class MainActivity extends Activity {
             showError("Сначала отправь или удали голосовое сообщение");
             return;
         }
-        new AlertDialog.Builder(this).setTitle("Добавить вложение")
-            .setItems(new String[]{"Фото и видео", "Документы и другие файлы"}, (d, which) -> {
+        MobileSheet.show(this,"Добавить вложение",new String[]{"Фото и видео", "Документы и другие файлы"},which -> {
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("*/*");
@@ -1168,7 +1166,7 @@ public final class MainActivity extends Activity {
                 pickerConversation = currentConversation;
                 try { startActivityForResult(intent, PICK_ATTACHMENTS); }
                 catch (Exception ex) { showError("Не удалось открыть системный выбор файлов"); }
-            }).setNegativeButton("Отмена", null).show();
+            });
     }
 
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
