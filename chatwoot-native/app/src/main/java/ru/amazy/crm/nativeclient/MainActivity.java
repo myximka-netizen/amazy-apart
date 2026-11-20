@@ -64,7 +64,7 @@ public final class MainActivity extends Activity {
     private static final int AUTO_REFRESH_MS = 15000;
     private static final int NOTE = Color.rgb(255, 245, 211);
 
-    private enum Screen { LOGIN, LIST, CHAT, INBOX }
+    private enum Screen { LOGIN, LIST, CHAT, INBOX, SETTINGS }
     private Screen screen = Screen.LOGIN;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -134,6 +134,7 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
         getWindow().setStatusBarColor(Color.WHITE);
         getWindow().setNavigationBarColor(Color.WHITE);
         getWindow().getDecorView().setSystemUiVisibility(
@@ -513,6 +514,10 @@ public final class MainActivity extends Activity {
             active.addView(reset, new LinearLayout.LayoutParams(dp(38), dp(32)));
             root.addView(active);
         }
+        syncLabel = text("", 12, 0xffae4728, false);
+        syncLabel.setPadding(dp(16),dp(6),dp(16),dp(6));
+        syncLabel.setVisibility(View.GONE);
+        root.addView(syncLabel);
         separator(root);
         conversationScroll = new ScrollView(this);
         conversationScroll.setFillViewport(true);
@@ -630,7 +635,7 @@ public final class MainActivity extends Activity {
                         JSONObject item = found.optJSONObject(i);
                         if (item == null) continue;
                         JSONObject actor = item.optJSONObject("primary_actor");
-                        int id = actor == null ? -1 : actor.optInt("id", actor.optInt("display_id", -1));
+                        int id = actor == null ? -1 : actor.optInt("display_id", actor.optInt("id", -1));
                         JSONObject meta = actor == null ? null : actor.optJSONObject("meta");
                         JSONObject sender = meta == null ? null : meta.optJSONObject("sender");
                         String name = sender == null ? "Диалог #" + id : sender.optString("name", "Диалог #" + id);
@@ -705,7 +710,7 @@ public final class MainActivity extends Activity {
             loading.setGravity(Gravity.CENTER);
             conversationContainer.addView(loading, new LinearLayout.LayoutParams(-1, dp(120)));
         }
-        if (syncLabel != null) syncLabel.setText("↻ Синхронизация…");
+        if (syncLabel != null && lastListFingerprint.isEmpty()) syncLabel.setVisibility(View.GONE);
         final int requestedPage = page;
         final String requestedStatus = filterStatus;
         final String requestedQuery = query;
@@ -726,15 +731,16 @@ public final class MainActivity extends Activity {
                         }
                         lastListFingerprint = fingerprint;
                     }
-                    if (syncLabel != null)
-                        syncLabel.setText("● Обновлено в " + new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date())
-                            + " · каждые 15 сек.");
+                    if (syncLabel != null) syncLabel.setVisibility(View.GONE);
                 });
             } catch (Exception ex) {
                 main.post(() -> {
                     if (screen != Screen.LIST || generation != request || conversationContainer == null) return;
                     listLoading = false;
-                    if (syncLabel != null) syncLabel.setText("● Нет связи · повтор через 15 сек.");
+                    if (syncLabel != null) {
+                        syncLabel.setText("Нет связи · повтор через 15 сек.");
+                        syncLabel.setVisibility(View.VISIBLE);
+                    }
                     if (lastListFingerprint.isEmpty()) {
                         conversationContainer.removeAllViews();
                         TextView err = text(ex.getMessage(), 15, Color.rgb(179, 45, 62), false);
@@ -897,24 +903,84 @@ public final class MainActivity extends Activity {
     }
 
     private void showSettings() {
-        new AlertDialog.Builder(this)
-            .setTitle("Подключение и уведомления")
-            .setMessage("Сервер: " + credentials.server() + "\\nАккаунт: #" + account +
-                "\\n\\n" + PushBridge.status(this) +
-                "\\n\\nВерсия 0.7.0 (сборка 6). Автообновление списка и переписки: каждые 15 секунд.\nДля Push сервер Chatwoot должен иметь FIREBASE_PROJECT_ID и FIREBASE_CREDENTIALS.")
-            .setPositiveButton("Закрыть", (d, w) -> d.dismiss())
-            .setNeutralButton("Проверить Push", (d, w) -> {
-                requestPushPermission();
-                PushBridge.onLogin(this);
-                showError("Повторно проверяем Firebase и регистрацию Chatwoot");
-            })
-            .setNegativeButton("Сменить подключение", (d, w) -> {
-                PushBridge.unregisterBeforeLogout(this);
-                credentials.clear();
-                api = null;
-                showLogin("");
-            })
-            .show();
+        if (sending || api == null) return;
+        screen = Screen.SETTINGS;
+        currentConversation = -1;
+        clear();
+        LinearLayout header = row();
+        header.setPadding(dp(12),dp(2),dp(12),dp(3));
+        TextView title = text("Настройки",17,NAVY,true);
+        title.setGravity(Gravity.CENTER);
+        header.addView(title,new LinearLayout.LayoutParams(-1,dp(48)));
+        root.addView(header);
+        separator(root);
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout content=column();
+        content.setPadding(dp(16),dp(18),dp(16),dp(18));
+        scroll.addView(content);
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        LinearLayout profile=row();
+        profile.setPadding(dp(14),dp(14),dp(14),dp(14));
+        profile.setBackground(outlined(Color.WHITE,12,BORDER));
+        profile.addView(avatar("Волшебно тут","",48,""),new LinearLayout.LayoutParams(dp(48),dp(48)));
+        LinearLayout identity=column();
+        identity.setPadding(dp(12),0,0,0);
+        identity.addView(text("Волшебно тут",16,NAVY,true));
+        identity.addView(text("Рабочее пространство · #" + account,13,SECONDARY,false));
+        profile.addView(identity,new LinearLayout.LayoutParams(0,-2,1));
+        content.addView(profile);
+        paddingView(content,24);
+        content.addView(text("ПОДКЛЮЧЕНИЕ",11,SECONDARY,true));
+        paddingView(content,9);
+        settingsRow(content,"Сервер Chatwoot",credentials.server(),null);
+        settingsRow(content,"Аккаунт","#"+account,null);
+        settingsRow(content,"Синхронизация","Автоматически каждые 15 секунд",null);
+        paddingView(content,22);
+        content.addView(text("УВЕДОМЛЕНИЯ",11,SECONDARY,true));
+        paddingView(content,9);
+        settingsRow(content,"Push-уведомления",PushBridge.status(this),()->{
+            requestPushPermission();PushBridge.onLogin(this);
+            showError("Регистрация FCM повторно запущена");
+        });
+        settingsRow(content,"Разрешения Android","Настройки уведомлений приложения",()->{
+            try {
+                Intent settings = new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                settings.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,getPackageName());
+                startActivity(settings);
+            }catch(Exception e){showError("Открой настройки уведомлений Android");}
+        });
+        paddingView(content,24);
+        content.addView(text("ПРИЛОЖЕНИЕ",11,SECONDARY,true));
+        paddingView(content,9);
+        settingsRow(content,"Версия","0.7.0 · сборка 6",null);
+        settingsRow(content,"Сменить подключение","Выйти из текущего аккаунта",()->{
+            new AlertDialog.Builder(this).setTitle("Выйти из аккаунта?")
+                .setMessage("Переписки останутся на сервере. Для повторного входа понадобится API-токен.")
+                .setNegativeButton("Отмена",null).setPositiveButton("Выйти",(d,w)->{
+                    PushBridge.unregisterBeforeLogout(this);credentials.clear();api=null;
+                    selectedInbox=0;selectedInboxName="Все каналы";query="";page=1;
+                    showLogin("");
+                }).show();
+        });
+        addBottomNav(root,"settings");
+    }
+
+    private void settingsRow(LinearLayout parent,String name,String subtitle,Runnable action) {
+        LinearLayout line=row();line.setPadding(dp(13),dp(12),dp(13),dp(12));
+        line.setBackground(outlined(Color.WHITE,10,BORDER));
+        LinearLayout detail=column();
+        detail.addView(text(name,14,NAVY,true));
+        TextView sub=text(subtitle,12,SECONDARY,false);
+        sub.setPadding(0,dp(4),0,0);detail.addView(sub);
+        line.addView(detail,new LinearLayout.LayoutParams(0,-2,1));
+        if(action!=null){
+            ImageView arrow=new ImageView(this);arrow.setImageDrawable(new MobileIcon("chevron",SECONDARY,dp(20)));
+            arrow.setRotation(-90);
+            line.addView(arrow,new LinearLayout.LayoutParams(dp(20),dp(20)));
+            line.setOnClickListener(v->action.run());
+        }
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(6);
+        parent.addView(line,p);
     }
 
     private void requestPushPermission() {
@@ -1477,15 +1543,24 @@ public final class MainActivity extends Activity {
         if (screen != Screen.CHAT || statusButton == null) return;
         String[] options = {"Открыт", "Ожидание", "Закрыт"};
         String[] values = {"open", "pending", "resolved"};
-        new AlertDialog.Builder(this)
-            .setTitle("Статус диалога")
-            .setSingleChoiceItems(options, currentStatus.equals("resolved") ? 2 :
-                currentStatus.equals("pending") ? 1 : 0, (dialog, which) -> {
-                dialog.dismiss();
-                setConversationStatus(values[which]);
-            })
-            .setNegativeButton("Отмена", null)
-            .show();
+        int[] colors = {0xfff1f1f1, 0xffffefd7, 0xffe2f5ea};
+        LinearLayout choices = column();
+        choices.setPadding(dp(15),dp(7),dp(15),dp(12));
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Статус диалога")
+            .setView(choices).setNegativeButton("Отмена", null).create();
+        LinearLayout group = row();
+        for (int i=0;i<options.length;i++) {
+            final int choice=i;
+            Button card=button((currentStatus.equals(values[i])?"✓  ":"")+options[i],false);
+            card.setTextSize(12);
+            card.setPadding(dp(5),0,dp(5),0);
+            card.setBackground(ripple(colors[i],12,currentStatus.equals(values[i])?BLUE:Color.TRANSPARENT));
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(66),1);p.leftMargin=dp(3);p.rightMargin=dp(3);
+            group.addView(card,p);
+            card.setOnClickListener(v->{dialog.dismiss();setConversationStatus(values[choice]);});
+        }
+        choices.addView(group);
+        dialog.show();
     }
 
     private void setConversationStatus(String next) {
@@ -1523,7 +1598,7 @@ public final class MainActivity extends Activity {
                 .setPositiveButton("Удалить", (d, w) -> showList()).show();
             return;
         }
-        if (screen == Screen.CHAT || screen == Screen.INBOX) showList();
+        if (screen == Screen.CHAT || screen == Screen.INBOX || screen == Screen.SETTINGS) showList();
         else super.onBackPressed();
     }
 }
