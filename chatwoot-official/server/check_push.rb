@@ -1,6 +1,6 @@
 # Run in the Chatwoot sidekiq container with bundle exec rails runner - .
-# Default mode only reads configuration. "send" sends one synthetic notification
-# directly to the selected agent device. It never writes a customer message.
+# The default mode reads configuration. "probe" sends a device-only test.
+# "send" also tests opening an assigned conversation. Neither writes a chat message.
 require 'json'
 require 'net/http'
 require 'securerandom'
@@ -46,7 +46,9 @@ begin
     abort 'Operator is not a member of account 2' unless members.exists?(user_id: agent_id)
     subscriptions = subscriptions.where(user_id: agent_id)
     settings = NotificationSetting.find_by(account_id: account_id, user_id: agent_id)
+    puts "push_new_conversation_enabled=#{!!settings&.push_conversation_creation?}"
     puts "push_assigned_message_enabled=#{!!settings&.push_assigned_conversation_new_message?}"
+    puts "push_participating_message_enabled=#{!!settings&.push_participating_conversation_new_message?}"
     recent = Notification.where(account_id: account_id, user_id: agent_id).order(id: :desc).limit(4)
     recent.pluck(:id, :notification_type, :created_at).each do |id, kind, created|
       puts "notification_id=#{id} kind=#{kind} created=#{created.utc.iso8601}"
@@ -57,37 +59,49 @@ begin
     attrs = sub.subscription_attributes || {}
     puts "subscription_id=#{sub.id} agent_id=#{sub.user_id} android=#{attrs['devicePlatform'].to_s.casecmp('Android').zero?} has_token=#{attrs['push_token'].present?} updated=#{sub.updated_at.utc.iso8601}"
   end
-  exit if ENV.fetch('CRM_PUSH_MODE', 'check') == 'check'
-  abort 'Unknown test mode' unless ENV['CRM_PUSH_MODE'] == 'send'
+  mode = ENV.fetch('CRM_PUSH_MODE', 'check')
+  exit if mode == 'check'
+  abort 'Unknown test mode' unless %w[probe send].include?(mode)
   abort 'Firebase settings are incomplete' unless correct_key
   abort 'Set CRM_AGENT_ID for the test operator' unless agent_id
   target = subscriptions.find(Integer(ENV.fetch('CRM_SUBSCRIPTION_ID')))
-  registration = target.subscription_attributes.fetch('push_token')
-  display_id = Integer(ENV.fetch('CRM_CONVERSATION_ID'))
-  chat = Account.find(account_id).conversations.find_by!(display_id: display_id, assignee_id: agent_id)
+  attrs = target.subscription_attributes
+  abort 'Select an Android subscription with a token' unless attrs['devicePlatform'].to_s.casecmp('Android').zero? && attrs['push_token'].present?
+  test_id = SecureRandom.hex(3)
+  message = { token: attrs.fetch('push_token'), android: { priority: 'high' },
+              notification: { title: "CRM - #{test_id}", body: "FCM test #{test_id}" } }
+  if mode == 'send'
+    display_id = Integer(ENV.fetch('CRM_CONVERSATION_ID'))
+    chat = Account.find(account_id).conversations.find_by!(display_id: display_id, assignee_id: agent_id)
+    event = { account_id: account_id, notification_type: 'conversation_creation',
+              primary_actor_type: 'Conversation', primary_actor_id: chat.id, primary_actor: { id: chat.display_id } }
+    message[:notification] = { title: "Волшебно тут CRM · #{test_id}", body: "Проверка перехода в тестовый диалог №#{chat.display_id}" }
+    message[:data] = { payload: { data: { notification: event } }.to_json }
+  end
+  stage = 'Google OAuth'
   require 'googleauth'
   auth = Google::Auth::ServiceAccountCredentials.make_creds(
     json_key_io: StringIO.new(credentials), scope: 'https://www.googleapis.com/auth/firebase.messaging'
   )
   oauth = auth.fetch_access_token!.fetch('access_token')
-  test_id = SecureRandom.hex(3)
-  event = { account_id: account_id, notification_type: 'conversation_creation',
-            primary_actor_type: 'Conversation', primary_actor_id: chat.id, primary_actor: { id: chat.display_id } }
-  payload = {
-    message: {
-      token: registration, android: { priority: 'high' },
-      notification: { title: "Волшебно тут CRM · #{test_id}", body: "Проверка перехода в тестовый диалог №#{chat.display_id}" },
-      data: { payload: { data: { notification: event } }.to_json }
-    }
-  }
+  stage = 'FCM HTTP v1'
   uri = URI("https://fcm.googleapis.com/v1/projects/#{project}/messages:send")
   request = Net::HTTP::Post.new(uri, 'Authorization' => "Bearer #{oauth}", 'Content-Type' => 'application/json')
-  request.body = JSON.generate(payload)
+  request.body = JSON.generate(message: message)
   response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 10, read_timeout: 20) { |http| http.request(request) }
-  result = JSON.parse(response.body)
-  abort "FCM HTTP #{response.code} status=#{result.dig('error', 'status')}" unless response.is_a?(Net::HTTPSuccess) && result['name'].present?
-  puts "FCM accepted test=#{test_id} conversation=#{display_id} at=#{Time.now.utc.iso8601}"
+  result = begin
+    JSON.parse(response.body)
+  rescue JSON::ParserError
+    {}
+  end
+  unless response.is_a?(Net::HTTPSuccess) && result['name'].present?
+    problem = result.fetch('error', {})
+    codes = [problem['status'], *Array(problem['details']).flat_map { |row| row.values_at('errorCode', 'reason') }]
+    labels = codes.compact.grep(/\A[A-Z][A-Z0-9_]{1,64}\z/).uniq.join(',')
+    abort "FCM HTTP #{response.code} status=#{labels.presence || 'unknown'}"
+  end
+  puts "FCM accepted test=#{test_id}#{" conversation=#{display_id}" if mode == 'send'} at=#{Time.now.utc.iso8601}"
 rescue StandardError => error
   # Some libraries include signed requests or the whole response in exception messages.
-  abort "Diagnostic stopped (#{error.class.name}). Check the selected IDs, server version, Firebase settings and network."
+  abort "Diagnostic stopped at #{stage || 'configuration'} (#{error.class.name}). Check the selected IDs, server version, Firebase settings and network."
 end

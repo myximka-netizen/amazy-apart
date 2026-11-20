@@ -4,6 +4,7 @@ on:
     branches: [chatwoot-official-android]
     paths:
       - 'chatwoot-official/server/compat/**'
+      - 'chatwoot-official/server/check_push.rb'
       - '.github/workflows/chatwoot-server-compat.yml'
   workflow_dispatch:
 permissions:
