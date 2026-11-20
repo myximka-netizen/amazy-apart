@@ -100,13 +100,13 @@ jobs:
       - name: Upload compiled and signature-checked debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: Volshebno-Tut-CRM-v0.5-Debug-APK
+          name: Volshebno-Tut-CRM-v0.6-Debug-APK
           path: chatwoot-native/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
       - name: Upload stable signed release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Volshebno-Tut-CRM-v0.5-Signed-APK
+          name: Volshebno-Tut-CRM-v0.6-Signed-APK
           path: chatwoot-native/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: ignore
           retention-days: 30
