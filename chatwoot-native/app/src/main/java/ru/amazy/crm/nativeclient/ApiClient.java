@@ -1,8 +1,15 @@
 package ru.amazy.crm.nativeclient;
 
+import android.content.Context;
 import org.json.JSONObject;
 import org.json.JSONArray;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -57,8 +64,13 @@ final class ApiClient {
     }
 
     JSONObject conversations(String status, int page, String search, String assigneeType) throws IOException {
+        return conversations(status, page, search, assigneeType, 0);
+    }
+
+    JSONObject conversations(String status, int page, String search, String assigneeType, int inboxId) throws IOException {
         String path = accountPath() + "/conversations?status=" + encode(status) + "&page=" + page
             + "&assignee_type=" + encode(assigneeType);
+        if (inboxId > 0) path += "&inbox_id=" + inboxId;
         if (search != null && !search.isBlank()) path += "&q=" + encode(search);
         return request("GET", path, null);
     }
@@ -101,6 +113,126 @@ final class ApiClient {
             body.put("private", privateNote);
         } catch (Exception ex) { throw new IOException("Не удалось сформировать сообщение", ex); }
         return request("POST", accountPath() + "/conversations/" + conversationId + "/messages", body);
+    }
+
+    // Chatwoot's dashboard sends attachments as multipart form data, not base64 JSON.
+    // Stage first to know exact size: many reverse proxies reject chunked uploads.
+    JSONObject sendAttachments(Context context, int conversationId, String caption,
+                               boolean note, List<AttachmentDraft> attachments) throws IOException {
+        if (attachments.isEmpty() || attachments.size() > AttachmentDraft.MAX_COUNT)
+            throw new IOException("Выбери от 1 до 10 файлов");
+        ArrayList<File> staged = new ArrayList<>();
+        HttpURLConnection conn = null;
+        try {
+            long total = 0;
+            byte[] buffer = new byte[65536];
+            for (AttachmentDraft item : attachments) {
+                File file = File.createTempFile("crm-upload-", ".tmp", context.getCacheDir());
+                staged.add(file);
+                long count = 0;
+                try (InputStream in = item.open(context); FileOutputStream out = new FileOutputStream(file)) {
+                    int n;
+                    while ((n = in.read(buffer)) != -1) {
+                        if (Thread.currentThread().isInterrupted()) throw new IOException("Отправка отменена");
+                        if (n == 0) continue;
+                        count += n;
+                        total += n;
+                        if (count > AttachmentDraft.MAX_FILE || total > AttachmentDraft.MAX_TOTAL)
+                            throw new IOException("Не более 40 МБ на файл и 80 МБ на сообщение");
+                        out.write(buffer, 0, n);
+                    }
+                }
+                if (count == 0) throw new IOException("Пустой файл: " + item.name);
+            }
+
+            String boundary = "----AmazyCRM" + UUID.randomUUID().toString().replace("-", "");
+            ByteArrayOutputStream fields = new ByteArrayOutputStream();
+            multipartField(fields, boundary, "content", caption);
+            multipartField(fields, boundary, "message_type", "outgoing");
+            multipartField(fields, boundary, "private", Boolean.toString(note));
+            if (attachments.size() == 1 && attachments.get(0).voice)
+                multipartField(fields, boundary, "is_voice_message", "true");
+            ArrayList<byte[]> headers = new ArrayList<>();
+            long length = fields.size();
+            byte[] newline = "\r\n".getBytes(StandardCharsets.UTF_8);
+            for (int i = 0; i < attachments.size(); i++) {
+                AttachmentDraft item = attachments.get(i);
+                byte[] header = ("--" + boundary + "\r\n" +
+                    "Content-Disposition: form-data; name=\"attachments[]\"; filename=\"" + item.name + "\"\r\n" +
+                    "Content-Type: " + item.mime + "\r\n\r\n").getBytes(StandardCharsets.UTF_8);
+                headers.add(header);
+                length += header.length + staged.get(i).length() + newline.length;
+            }
+            byte[] end = ("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8);
+            length += end.length;
+            conn = (HttpURLConnection) new URL(base + accountPath() + "/conversations/" +
+                conversationId + "/messages").openConnection();
+            conn.setInstanceFollowRedirects(false);
+            conn.setConnectTimeout(20000);
+            conn.setReadTimeout(180000);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("api_access_token", accessToken);
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+            conn.setDoOutput(true);
+            conn.setFixedLengthStreamingMode(length);
+            try (OutputStream out = conn.getOutputStream()) {
+                fields.writeTo(out);
+                for (int i = 0; i < staged.size(); i++) {
+                    out.write(headers.get(i));
+                    try (FileInputStream in = new FileInputStream(staged.get(i))) {
+                        int n;
+                        while ((n = in.read(buffer)) != -1) {
+                            if (Thread.currentThread().isInterrupted()) throw new IOException("Отправка отменена");
+                            out.write(buffer, 0, n);
+                        }
+                    }
+                    out.write(newline);
+                }
+                out.write(end);
+            }
+            return parseResponse(conn);
+        } finally {
+            if (conn != null) conn.disconnect();
+            for (File file : staged) file.delete();
+        }
+    }
+
+    private static void multipartField(OutputStream out, String boundary, String name, String value) throws IOException {
+        out.write(("--" + boundary + "\r\nContent-Disposition: form-data; name=\"" + name +
+            "\"\r\n\r\n" + value + "\r\n").getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static JSONObject parseResponse(HttpURLConnection conn) throws IOException {
+        int code = conn.getResponseCode();
+        String raw = read(code >= 400 ? conn.getErrorStream() : conn.getInputStream());
+        if (code < 200 || code >= 300) {
+            String detail = "";
+            try {
+                JSONObject error = new JSONObject(raw);
+                detail = error.optString("message", error.optString("error", ""));
+                if (detail.length() > 300) detail = detail.substring(0, 300);
+            } catch (Exception ignored) { }
+            if (code == 413) detail = "Файл превышает лимит сервера.";
+            throw new ApiException(code, "Сервер вернул HTTP " + code + (detail.isBlank() ? "" : ": " + detail));
+        }
+        if (raw.isBlank() || "null".equals(raw.trim())) return new JSONObject();
+        try {
+            if (raw.trim().startsWith("[")) {
+                JSONObject wrapped = new JSONObject();
+                wrapped.put("_array", new JSONArray(raw));
+                return wrapped;
+            }
+            return new JSONObject(raw);
+        } catch (Exception ex) {
+            throw new IOException("Сервер вернул неожиданный формат ответа", ex);
+        }
+    }
+
+    JSONArray inboxes() throws IOException {
+        JSONObject result = request("GET", accountPath() + "/inboxes", null);
+        JSONArray items = result.optJSONArray("payload");
+        return items == null ? result.optJSONArray("_array") : items;
     }
 
     JSONObject setStatus(int conversationId, String status) throws IOException {
@@ -151,7 +283,7 @@ final class ApiClient {
             conn.setRequestMethod(method);
             conn.setRequestProperty("api_access_token", accessToken);
             conn.setRequestProperty("Accept", "application/json");
-            conn.setRequestProperty("User-Agent", "VolshebnoTutNativeCRM/0.5");
+            conn.setRequestProperty("User-Agent", "VolshebnoTutNativeCRM/0.6");
             if (body != null) {
                 conn.setDoOutput(true);
                 conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
