@@ -112,7 +112,7 @@ index 3b799b7..ee6eccc 100644
  i18n.translations = {
    af,
 diff --git a/src/i18n/ru.json b/src/i18n/ru.json
-index 352391e..c197186 100644
+index 352391e..8603632 100644
 --- a/src/i18n/ru.json
 +++ b/src/i18n/ru.json
 @@ -39,7 +39,17 @@
@@ -386,7 +386,14 @@ index 352391e..c197186 100644
    },
    "AVAILABILITY": {
      "ONLINE": "В сети",
-@@ -330,7 +515,8 @@
+@@ -325,12 +510,13 @@
+     "PUSH": "Push уведомления",
+     "CONVERSATION_CREATE_PUSH": "Новый диалог создан",
+     "CONVERSATION_ASSIGNEE_PUSH": "Вам назначен диалог",
+-    "CONVERSATION_ASSIGNED_NEW_MESSAGE_PUSH": "Вас упомянули в диалоге",
+-    "CONVERSATION_MENTION": "Новое сообщение создано в назначенном диалоге",
++    "CONVERSATION_ASSIGNED_NEW_MESSAGE_PUSH": "Новое сообщение в назначенном вам диалоге",
++    "CONVERSATION_MENTION": "Вас упомянули в диалоге",
      "CONVERSATION_PARTICIPATING_NEW_MESSAGE_PUSH": "Новое сообщение создано в участвующем диалоге",
      "CONVERSATION_SLA_MISSED_FIRST_RESPONSE": "Разговор не соответствует SLA по первому ответу",
      "CONVERSATION_SLA_MISSED_NEXT_RESPONSE": "Диалог не соответствует SLA по следующему ответу",
@@ -908,10 +915,29 @@ index 0e63273..5c33a9a 100644
    });
  });
 diff --git a/src/utils/specs/pushUtils.spec.ts b/src/utils/specs/pushUtils.spec.ts
-index 8d5c4c0..fcecb42 100644
+index 8d5c4c0..9095eb5 100644
 --- a/src/utils/specs/pushUtils.spec.ts
 +++ b/src/utils/specs/pushUtils.spec.ts
-@@ -46,7 +46,7 @@ describe('findConversationLinkFromPush', () => {
+@@ -1,6 +1,18 @@
++import { NOTIFICATION_PREFERENCE_TYPES } from '@/constants';
++import ru from '@/i18n/ru.json';
+ import { transformNotification } from '../camelCaseKeys';
+ import { findConversationLinkFromPush, findNotificationFromFCM } from '../pushUtils';
+
++it('identifies the assigned-message and mention switches in Russian', () => {
++  const labels: Record<string, string> = ru.NOTIFICATION_PREFERENCE;
++  expect(labels[NOTIFICATION_PREFERENCE_TYPES.push_assigned_conversation_new_message]).toBe(
++    'Новое сообщение в назначенном вам диалоге',
++  );
++  expect(labels[NOTIFICATION_PREFERENCE_TYPES.push_conversation_mention]).toBe(
++    'Вас упомянули в диалоге',
++  );
++});
++
+ describe('findNotificationFromFCM', () => {
+   it('should return notification from FCM HTTP v1 message', () => {
+     const message = {
+@@ -46,7 +58,7 @@ describe('findConversationLinkFromPush', () => {
      const transformedNotification = transformNotification(notification);
      const result = findConversationLinkFromPush({
        notification: transformedNotification,

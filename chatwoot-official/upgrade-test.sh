@@ -4,19 +4,23 @@ here=$(cd "$(dirname "$0")" && pwd)
 package=$(jq -r .package "$here/deployment.json")
 version=$(jq -r .version "$here/deployment.json")
 old=${1:?Pass the signed 0.7.0 APK}
-new=${2:?Pass the new signed APK}
+previous=${2:?Pass the signed 0.8.0 APK}
+new=${3:?Pass the new signed APK}
 temp=$(mktemp -d)
 trap 'rm -rf "$temp"' EXIT
 echo "43c13b508659d987c662128baf86592ec724430631c4944a20f60d128c242ae1  $old" | sha256sum -c -
 tools="$ANDROID_HOME/build-tools/36.0.0"
 cert() { "$tools/apksigner" verify --print-certs "$1" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p'; }
 old_cert=$(cert "$old")
-[[ -n "$old_cert" && "$old_cert" == "$(cert "$new")" ]]
+[[ -n "$old_cert" && "$old_cert" == "$(cert "$previous")" && "$old_cert" == "$(cert "$new")" ]]
 install_id() { adb shell dumpsys package "$package" | tr -d '\r' | awk '/firstInstallTime=/{print; exit}'; }
 adb install "$old"
 adb shell am start -W -n "$package/.MainActivity"
 stamp=$(install_id)
 [[ -n "$stamp" ]]
+adb install -r "$previous"
+[[ "$stamp" == "$(install_id)" ]]
+adb shell am start -W -n "$package/.MainActivity"
 adb install -r "$new"
 [[ "$stamp" == "$(install_id)" ]]
 adb shell dumpsys package "$package" > "$temp/package"
