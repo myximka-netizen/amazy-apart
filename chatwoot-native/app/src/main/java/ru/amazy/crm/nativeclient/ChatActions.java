@@ -21,8 +21,7 @@ final class ChatActions {
                      EditText composer, Runnable refresh) {
         String[] options = {"Информация о госте", "Назначить оператора",
             "Приоритет", "Готовые ответы", "Обновить переписку"};
-        new AlertDialog.Builder(activity).setTitle("Действия Chatwoot")
-            .setItems(options, (d, which) -> {
+        MobileSheet.show(activity,"Действия с диалогом",options,which -> {
                 switch (which) {
                     case 0: details(activity, api, id, fallbackName); break;
                     case 1: agents(activity, api, id); break;
@@ -31,7 +30,7 @@ final class ChatActions {
                     case 4: refresh.run(); break;
                     default: break;
                 }
-            }).show();
+            });
     }
 
     private static void notifyUser(Activity activity, String message) {
