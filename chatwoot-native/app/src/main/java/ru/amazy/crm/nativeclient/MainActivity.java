@@ -83,6 +83,7 @@ public final class MainActivity extends Activity {
     private SecureTokenStore credentials;
     private ApiClient api;
     private boolean foreground = false;
+    private boolean previewMode = false;
     private int generation = 0;
     private int account = 2;
     private int page = 1;
@@ -153,6 +154,14 @@ public final class MainActivity extends Activity {
             root.requestApplyInsets();
         }
         credentials = new SecureTokenStore(this);
+        String preview = getIntent().getStringExtra("ui_preview");
+        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 &&
+            ("list".equals(preview) || "chat".equals(preview))) {
+            previewMode = true;
+            if ("chat".equals(preview)) { currentChannel = "Channel::Telegram"; showChat(24,"Анна Миронова","open"); }
+            else showList();
+            return;
+        }
         String token = credentials.loadToken();
         if (token == null) showLogin("");
         else {
@@ -171,7 +180,7 @@ public final class MainActivity extends Activity {
         super.onResume();
         foreground = true;
         main.removeCallbacks(foregroundRefresh);
-        main.post(foregroundRefresh);
+        if (!previewMode) main.post(foregroundRefresh);
     }
 
     @Override protected void onPause() {
@@ -480,7 +489,7 @@ public final class MainActivity extends Activity {
 
     private void showList() {
         if (sending) { showError("Дождись завершения отправки"); return; }
-        if (api == null) { showLogin("Сначала подключись к серверу"); return; }
+        if (api == null && !previewMode) { showLogin("Сначала подключись к серверу"); return; }
         screen = Screen.LIST;
         currentConversation = -1;
         clear();
@@ -701,6 +710,7 @@ public final class MainActivity extends Activity {
 
     private void loadConversations(boolean indicate) {
         if (conversationContainer == null || screen != Screen.LIST || listLoading) return;
+        if (previewMode) { renderConversations(UiPreview.conversations()); return; }
         listLoading = true;
         final int request = ++generation;
         final int scrollY = conversationScroll == null ? 0 : conversationScroll.getScrollY();
@@ -1336,6 +1346,7 @@ public final class MainActivity extends Activity {
 
     private void loadMessages(boolean indicate) {
         if (screen != Screen.CHAT || messageContainer == null || loadingMessages) return;
+        if(previewMode){renderMessages(UiPreview.messages());return;}
         final int id = currentConversation;
         final int request = generation;
         loadingMessages = true;
@@ -1500,7 +1511,7 @@ public final class MainActivity extends Activity {
     }
 
     private void send() {
-        if (screen != Screen.CHAT || draft == null || sendButton == null || sending || recorder != null) return;
+        if (previewMode || screen != Screen.CHAT || draft == null || sendButton == null || sending || recorder != null) return;
         final String body = draft.getText().toString().trim();
         final ArrayList<AttachmentDraft> files = new ArrayList<>(pendingAttachments);
         if (body.isBlank() && files.isEmpty()) return;
