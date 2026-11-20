@@ -45,12 +45,28 @@ jobs:
             echo "::warning::No stable signing secrets. Build is verified, but only debug APK is available."
             exit 0
           fi
+          # The generated signing kit uses an alphanumeric password. Remove
+          # whitespace introduced by copying the text files (CR/LF, spaces).
+          SIGNING_PASSWORD=$(printf '%s' "$SIGNING_PASSWORD" | tr -d '[:space:]')
+          echo "::add-mask::$SIGNING_PASSWORD"
           umask 077
-          printf '%s' "$SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/amazy-release.jks"
           export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/amazy-release.jks"
           export ANDROID_KEYSTORE_PASSWORD="$SIGNING_PASSWORD"
           export ANDROID_KEY_ALIAS="amazy_crm"
           export ANDROID_KEY_PASSWORD="$SIGNING_PASSWORD"
+          CHECK_STORE="$RUNNER_TEMP/amazy-signing-check.p12"
+          trap 'rm -f "$ANDROID_KEYSTORE_FILE" "$CHECK_STORE"' EXIT
+          printf '%s' "$SIGNING_KEY_BASE64" | tr -d '[:space:]' | base64 --decode > "$ANDROID_KEYSTORE_FILE"
+          if ! keytool -list -keystore "$ANDROID_KEYSTORE_FILE" -storepass:env ANDROID_KEYSTORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error::Signing keystore or password is incorrect. Check both AMAZY_ANDROID_KEYSTORE_B64 and AMAZY_ANDROID_KEYSTORE_PASSWORD against the original signing kit."
+            exit 1
+          fi
+          if ! keytool -importkeystore -srckeystore "$ANDROID_KEYSTORE_FILE" -srcstorepass:env ANDROID_KEYSTORE_PASSWORD -srcalias "$ANDROID_KEY_ALIAS" -srckeypass:env ANDROID_KEY_PASSWORD -destkeystore "$CHECK_STORE" -deststoretype PKCS12 -deststorepass:env ANDROID_KEYSTORE_PASSWORD -destkeypass:env ANDROID_KEY_PASSWORD -noprompt >/dev/null 2>&1; then
+            echo "::error::Signing store opens, but the private key cannot be decrypted. Check the original signing kit and key password."
+            exit 1
+          fi
+          rm -f "$CHECK_STORE"
+          echo "Permanent signing keystore and private key verified."
           cd chatwoot-native
           gradle :app:assembleRelease --no-daemon
           RELEASE=app/build/outputs/apk/release/app-release.apk
