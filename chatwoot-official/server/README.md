@@ -8,7 +8,8 @@
 
 ```powershell
 Set-Location C:\chatwoot_amazy_start
-(Invoke-RestMethod 'https://desktop-to6ives.taile101ff.ts.net/api').version
+$crmInfo = Invoke-RestMethod -Uri 'https://desktop-to6ives.taile101ff.ts.net/api'
+$crmInfo.version
 $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $diag = Join-Path $env:TEMP 'amazy-check-push.rb'
 $base = 'https://raw.githubusercontent.com/myximka-netizen/amazy-apart/chatwoot-official-android/chatwoot-official/server'
@@ -33,7 +34,7 @@ Get-Content -Raw -Encoding UTF8 -LiteralPath $keyPath | docker compose exec -T r
 Get-Content -Raw -Encoding UTF8 $diag | docker compose exec -T sidekiq bundle exec rails runner -
 ```
 
-На сервере Chatwoot 4.20.1 при двух заполненных параметрах `Notification::PushNotificationService` использует собственный FCM HTTP v1. Фоновый процесс Sidekiq должен иметь исходящий HTTPS-доступ к `oauth2.googleapis.com` и `fcm.googleapis.com`. При работающем выборочном прокси проверьте именно этот маршрут. Изменение конфигурации через Rails сбрасывает кеш. Если конкретная версия использует значения из окружения, примените их к обоим сервисам `rails` и `sidekiq` с тем же набором Compose-файлов, которым запущен ваш стек.
+На сервере Chatwoot 4.19.1 при двух заполненных параметрах `Notification::PushNotificationService` использует собственный FCM HTTP v1. Фоновый процесс Sidekiq должен иметь исходящий HTTPS-доступ к `oauth2.googleapis.com` и `fcm.googleapis.com`. При работающем выборочном прокси проверьте именно этот маршрут. Изменение конфигурации через Rails сбрасывает кеш. Если конкретная версия использует значения из окружения, примените их к обоим сервисам `rails` и `sidekiq` с тем же набором Compose-файлов, которым запущен ваш стек.
 
 ## Проверить доставку и открытие диалога
 
@@ -67,6 +68,6 @@ Get-Content -Raw -Encoding UTF8 $diag | docker compose exec -T -e CRM_PUSH_MODE=
 
 ## Вложения Telegram
 
-Android записывает голосовое в M4A с AAC и прикрепляет его к диалогу. Вид сообщения у гостя зависит от реализации канала. В серверной версии Chatwoot 4.20.1 Telegram-сервис передаёт фото, видео и аудио по ссылкам `attachment.download_url`, а документы — через multipart. Если текст и документы доходят, но медиа остаются только в CRM, проверьте, откуда Telegram может скачать вложение. Частный адрес Tailscale доступен участникам вашей сети. Для доставки медиа Telegram нужен доступ к самим файлам, например через ограниченные по времени ссылки объектного хранилища.
+Android записывает голосовое в M4A с AAC и прикрепляет его к диалогу. Вид сообщения у гостя зависит от реализации канала. В серверной версии Chatwoot 4.19.1 Telegram-сервис передаёт фото, видео и аудио по ссылкам `attachment.download_url`, а документы — через multipart. Если текст и документы доходят, но медиа остаются только в CRM, проверьте, откуда Telegram может скачать вложение. Частный адрес Tailscale доступен участникам вашей сети. Для доставки медиа Telegram нужен доступ к самим файлам, например через ограниченные по времени ссылки объектного хранилища.
 
-[Отправка через Firebase HTTP v1](https://firebase.google.com/docs/cloud-messaging/send/v1-api) · [Серверная реализация Chatwoot 4.20.1](https://github.com/chatwoot/chatwoot/blob/v4.20.1/app/services/notification/push_notification_service.rb) · [Вложения Telegram](https://github.com/chatwoot/chatwoot/blob/v4.20.1/app/services/telegram/send_attachments_service.rb)
+[Отправка через Firebase HTTP v1](https://firebase.google.com/docs/cloud-messaging/send/v1-api) · [Серверная реализация Chatwoot 4.19.1](https://github.com/chatwoot/chatwoot/blob/v4.19.1/app/services/notification/push_notification_service.rb) · [Вложения Telegram](https://github.com/chatwoot/chatwoot/blob/v4.19.1/app/services/telegram/send_attachments_service.rb)

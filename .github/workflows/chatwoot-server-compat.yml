@@ -1,0 +1,65 @@
+name: Mobile API compatibility (Chatwoot 4.19.1)
+on:
+  push:
+    branches: [chatwoot-official-android]
+    paths:
+      - 'chatwoot-official/server/compat/**'
+      - '.github/workflows/chatwoot-server-compat.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compatibility:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Start isolated Chatwoot 4.19.1
+        run: |
+          set -euo pipefail
+          umask 077
+          cfg="$RUNNER_TEMP/compat.env"
+          printf 'POSTGRES_DATABASE=crm_compat\nPOSTGRES_HOST=crm-pg\nPOSTGRES_USERNAME=postgres\nREDIS_URL=redis://crm-redis:6379\nRAILS_ENV=production\nFRONTEND_URL=http://127.0.0.1:3000\nENABLE_PUSH_RELAY_SERVER=false\nDISABLE_TELEMETRY=true\nRAILS_LOG_LEVEL=error\n' > "$cfg"
+          printf 'SECRET_KEY_BASE=%s\nCRM_TEST_PASSWORD=Aa1!%s\n' "$(openssl rand -hex 64)" "$(openssl rand -hex 20)" >> "$cfg"
+          docker network create crm-compat
+          docker run -d --name crm-pg --network crm-compat -e POSTGRES_DB=crm_compat -e POSTGRES_HOST_AUTH_METHOD=trust pgvector/pgvector:pg16
+          docker run -d --name crm-redis --network crm-compat redis:7-alpine
+          docker run -d --name crm-server --network crm-compat -p 127.0.0.1:3000:3000 --env-file "$cfg" \
+            --entrypoint /bin/sh chatwoot/chatwoot:v4.19.1@sha256:a0d571a3a2f78f4fa4b1d7c21a53309c0184068d6021b3664ab37788faef04c1 \
+            -c 'bundle exec rails db:chatwoot_prepare && exec bundle exec rails server -b 0.0.0.0 -p 3000'
+          for i in {1..100}; do
+            if curl -fs http://127.0.0.1:3000/api > "$RUNNER_TEMP/version.json"; then break; fi
+            if [[ $(docker inspect -f '{{.State.Running}}' crm-server) != true ]]; then
+              docker logs --tail 30 crm-server
+              exit 1
+            fi
+            sleep 3
+          done
+          jq -e '.version == "4.19.1" and .queue_services == "ok" and .data_services == "ok"' "$RUNNER_TEMP/version.json"
+          docker exec crm-server mkdir -p /tmp/crm-qa
+          docker cp chatwoot-official/server/compat/seed.rb crm-server:/tmp/crm-qa/seed.rb
+          docker exec crm-server bundle exec rails runner /tmp/crm-qa/seed.rb
+          docker exec crm-server cat /tmp/crm-fixtures.json > "$RUNNER_TEMP/crm-fixtures.json"
+          docker exec -d crm-server bundle exec sidekiq -c 3 -q critical -q high -q default
+      - name: Create test attachments
+        run: |
+          if ! command -v ffmpeg >/dev/null; then sudo apt-get -qq update && sudo apt-get -qq install -y ffmpeg >/dev/null; fi
+          mkdir -p "$RUNNER_TEMP/crm-media"
+          cd "$RUNNER_TEMP/crm-media"
+          ffmpeg -loglevel error -f lavfi -i color=blue:s=48x48 -frames:v 1 -threads 1 photo.jpg
+          ffmpeg -loglevel error -f lavfi -i color=green:s=48x48:r=10 -t 0.5 -pix_fmt yuv420p video.mp4
+          ffmpeg -loglevel error -f lavfi -i sine=frequency=440 -t 0.5 -c:a aac recording.m4a
+          python -c "from PIL import Image; Image.new('RGB',(16,16),'white').save('guide.pdf')" || printf '%%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%%%EOF\n' > guide.pdf
+      - name: Exercise the mobile API and real Action Cable connection
+        run: |
+          python -m venv "$RUNNER_TEMP/compat-venv"
+          "$RUNNER_TEMP/compat-venv/bin/pip" -q install requests==2.32.5 websocket-client==1.8.0
+          set -a
+          source "$RUNNER_TEMP/compat.env"
+          set +a
+          export CRM_FIXTURES="$RUNNER_TEMP/crm-fixtures.json" CRM_MEDIA="$RUNNER_TEMP/crm-media"
+          "$RUNNER_TEMP/compat-venv/bin/python" chatwoot-official/server/compat/check.py
+      - name: Validate live-server diagnostic without production credentials
+        run: docker exec -i crm-server bundle exec rails runner - < chatwoot-official/server/check_push.rb
