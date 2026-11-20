@@ -94,6 +94,24 @@ jobs:
             adb shell am start -W -n ru.amazy.crm.nativeclient/.MainActivity
             sleep 5
             adb shell pidof ru.amazy.crm.nativeclient
+            mkdir -p ui-preview
+            adb shell am force-stop ru.amazy.crm.nativeclient
+            adb shell am start -W -n ru.amazy.crm.nativeclient/.MainActivity --es ui_preview list
+            sleep 3
+            adb shell pidof ru.amazy.crm.nativeclient
+            adb exec-out screencap -p > ui-preview/conversations.png
+            adb shell am force-stop ru.amazy.crm.nativeclient
+            adb shell am start -W -n ru.amazy.crm.nativeclient/.MainActivity --es ui_preview chat
+            sleep 3
+            adb shell pidof ru.amazy.crm.nativeclient
+            adb exec-out screencap -p > ui-preview/conversation.png
+      - name: Upload native UI screenshots (synthetic data)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Volshebno-Tut-CRM-v0.7-UI-preview
+          path: ui-preview/*.png
+          if-no-files-found: ignore
+          retention-days: 30
       - name: Report emulator status
         if: steps.emulator_test.outcome != 'success'
         run: echo "::warning::Android emulator test could not complete (possibly SDK image download). APK compilation and signature verification succeeded."
