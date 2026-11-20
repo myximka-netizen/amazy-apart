@@ -229,6 +229,10 @@ final class ApiClient {
         }
     }
 
+    JSONObject notifications() throws IOException {
+        return request("GET", accountPath() + "/notifications?page=1", null);
+    }
+
     JSONArray inboxes() throws IOException {
         JSONObject result = request("GET", accountPath() + "/inboxes", null);
         JSONArray items = result.optJSONArray("payload");
