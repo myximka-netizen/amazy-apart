@@ -27,6 +27,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -974,7 +975,7 @@ public final class MainActivity extends Activity {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         if (requestCode != MICROPHONE_PERMISSION) return;
         if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED &&
-            screen == Screen.CHAT && currentConversation == permissionConversation && foreground)
+            screen == Screen.CHAT && currentConversation == permissionConversation)
             startRecording();
         else if (results.length == 0 || results[0] != PackageManager.PERMISSION_GRANTED)
             showError("Для голосовых сообщений нужен доступ к микрофону");
@@ -1102,6 +1103,7 @@ public final class MainActivity extends Activity {
             empty.setGravity(Gravity.CENTER);
             messageContainer.addView(empty, new LinearLayout.LayoutParams(-1, dp(140)));
         }
+        String previousDay = "";
         for (int i = 0; i < items.length(); i++) {
             JSONObject m = items.optJSONObject(i);
             if (m == null) continue;
@@ -1110,14 +1112,31 @@ public final class MainActivity extends Activity {
             String content = m.optString("content", "");
             JSONArray attachments = m.optJSONArray("attachments");
             if (type == 2 && content.isBlank()) continue;
-            addMessageBubble(content, type, note, m.optLong("created_at", 0), attachments);
+            long created = m.optLong("created_at", 0);
+            String day = created > 0 ? new SimpleDateFormat("dd MMMM yyyy", new Locale("ru")).format(new Date(created * 1000)) : "";
+            if (!day.isEmpty() && !day.equals(previousDay)) {
+                TextView date = text(day, 12, SECONDARY, true);
+                date.setGravity(Gravity.CENTER);
+                messageContainer.addView(date, new LinearLayout.LayoutParams(-1, dp(33)));
+                previousDay = day;
+            }
+            JSONObject sender = m.optJSONObject("sender");
+            String author = sender == null ? "" : sender.optString("name", "");
+            addMessageBubble(content, type, note, created, attachments, author, m.optString("status", ""));
         }
         if (messageScroll != null && (firstRender || nearBottom))
             messageScroll.post(() -> messageScroll.fullScroll(View.FOCUS_DOWN));
     }
 
-    private void addMessageBubble(String content, int type, boolean note, long created, JSONArray attachments) {
+    private void addMessageBubble(String content, int type, boolean note, long created, JSONArray attachments, String author, String status) {
         boolean outgoing = type == 1;
+        if (type == 2 && !note) {
+            TextView event = text(content, 12, SECONDARY, false);
+            event.setGravity(Gravity.CENTER);
+            event.setPadding(dp(12), dp(5), dp(12), dp(8));
+            messageContainer.addView(event, new LinearLayout.LayoutParams(-1, -2));
+            return;
+        }
         LinearLayout line = row();
         line.setGravity(outgoing ? Gravity.RIGHT : Gravity.LEFT);
         LinearLayout.LayoutParams lineParams = new LinearLayout.LayoutParams(-1, -2);
@@ -1129,37 +1148,67 @@ public final class MainActivity extends Activity {
         line.addView(bubble, new LinearLayout.LayoutParams(-2, -2));
 
         if (note) bubble.addView(text("🔒 Внутренняя заметка", 11, Color.rgb(154, 107, 20), true));
-        if (type == 2 && !note) bubble.addView(text("Событие", 11, SECONDARY, true));
-        TextView body = text(content.isBlank() ? " " : content, 15, NAVY, false);
-        body.setMaxWidth(dp(285));
-        body.setTextIsSelectable(true);
-        bubble.addView(body);
+        else if (!author.isBlank()) bubble.addView(text(author, 11, SECONDARY, true));
+        if (!content.isBlank() && !"null".equals(content)) {
+            TextView body = text(content, 15, NAVY, false);
+            body.setMaxWidth(dp(285));
+            body.setTextIsSelectable(true);
+            bubble.addView(body);
+        }
         if (attachments != null) {
             for (int i = 0; i < attachments.length(); i++) {
-                JSONObject a = attachments.optJSONObject(i);
-                if (a == null) continue;
-                String link = a.optString("data_url", "");
-                if (link.isBlank()) link = a.optString("external_url", "");
+                JSONObject attachment = attachments.optJSONObject(i);
+                if (attachment == null) continue;
+                String link = attachment.optString("data_url", "");
+                if (!AttachmentMedia.isHttps(link)) link = attachment.optString("external_url", "");
                 final String url = link;
-                Button open = button("📎 Открыть вложение " + (i + 1), false);
+                String kind = attachment.optString("file_type", "file");
+                String label = "file".equals(kind) ? "Файл" : "image".equals(kind) ? "Фото" :
+                    "video".equals(kind) ? "Видео" : "audio".equals(kind) ? "Аудиосообщение" : "Вложение";
+                long size = attachment.optLong("file_size", 0);
+                String suffix = size > 0 ? "  ·  " + (size >= 1048576 ?
+                    String.format(Locale.US, "%.1f МБ", size / 1048576.0) : String.format(Locale.US, "%.0f КБ", size / 1024.0)) : "";
+                if ("image".equals(kind)) {
+                    ImageView image = new ImageView(this);
+                    image.setBackground(bg(PALE, 8));
+                    image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    image.setContentDescription("Открыть фото");
+                    LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(dp(224), dp(148));
+                    ip.topMargin = dp(6);
+                    bubble.addView(image, ip);
+                    String thumb = attachment.optString("thumb_url", "");
+                    AttachmentMedia.thumbnail(image, AttachmentMedia.isHttps(thumb) ? thumb : url);
+                    image.setOnClickListener(v -> openAttachment(url));
+                }
+                String extension = attachment.optString("extension", "");
+                Button open = button(("audio".equals(kind) ? "▶ " : "video".equals(kind) ? "▶ " : "📎 ") +
+                    label + ("file".equals(kind) && !extension.isBlank() && !"null".equals(extension) ? " ." + extension : "") + suffix, false);
+                open.setTextSize(12);
                 LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, dp(44));
                 ap.topMargin = dp(5);
                 bubble.addView(open, ap);
                 open.setOnClickListener(v -> {
-                    try {
-                        if (!url.startsWith("https://")) { showError("Недоступная ссылка вложения"); return; }
-                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-                    } catch (Exception ex) { showError("Не удалось открыть вложение"); }
+                    if ("audio".equals(kind)) AttachmentMedia.play(this, url);
+                    else openAttachment(url);
                 });
             }
         }
         if (created > 0) {
-            TextView at = text(stamp(created), 11, SECONDARY, false);
+            String indicator = !outgoing || note ? "" : "failed".equals(status) ? "  ⚠ Не доставлено" :
+                "read".equals(status) ? "  ✓✓" : "delivered".equals(status) ? "  ✓✓" : "sent".equals(status) ? "  ✓" : "";
+            TextView at = text(stamp(created) + indicator, 11, "failed".equals(status) ? Color.rgb(190, 40, 55) : SECONDARY, false);
             at.setGravity(Gravity.RIGHT);
             LinearLayout.LayoutParams timeParams = new LinearLayout.LayoutParams(-1, -2);
             timeParams.topMargin = dp(4);
             bubble.addView(at, timeParams);
         }
+    }
+
+    private void openAttachment(String url) {
+        try {
+            if (!AttachmentMedia.isHttps(url)) { showError("Ссылка на вложение недоступна по HTTPS"); return; }
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (Exception ex) { showError("Нет приложения для открытия вложения"); }
     }
 
     private void send() {
