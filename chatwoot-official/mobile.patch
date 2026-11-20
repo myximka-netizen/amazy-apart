@@ -591,6 +591,62 @@ index e01a5a9..0b5b866 100644
  
    return (
      <SideToolbarProvider>
+diff --git a/src/screens/chat-screen/components/audio-recorder/AudioRecorder.tsx b/src/screens/chat-screen/components/audio-recorder/AudioRecorder.tsx
+index 8a1c916..607bbb4 100644
+--- a/src/screens/chat-screen/components/audio-recorder/AudioRecorder.tsx
++++ b/src/screens/chat-screen/components/audio-recorder/AudioRecorder.tsx
+@@ -102,7 +102,7 @@ export const AudioRecorder = ({
+       const dirs = ReactNativeBlobUtil.fs.dirs;
+       const path = Platform.select({
+         ios: `audio-${localRecordedAudioCacheFilePaths.length}.m4a`,
+-        android: `${dirs.CacheDir}/audio-${localRecordedAudioCacheFilePaths.length}.aac`,
++        android: `${dirs.CacheDir}/audio-${localRecordedAudioCacheFilePaths.length}.m4a`,
+       });
+ 
+       ARPlayer.startRecorder(path, {
+@@ -110,11 +110,11 @@ export const AudioRecorder = ({
+         AVNumberOfChannelsKeyIOS: 2,
+         AVSampleRateKeyIOS: 44100,
+         AudioSourceAndroid: 1, // MIC
+-        OutputFormatAndroid: 6, // AAC_ADTS
++        OutputFormatAndroid: 2, // MPEG_4 container with AAC audio
+         AudioEncoderAndroid: 3, // AAC
+         AudioSamplingRateAndroid: 16000,
+         AudioEncodingBitRateAndroid: 128000,
+-        AudioChannelsAndroid: 2,
++        AudioChannelsAndroid: 1,
+       })
+         .then((value: string) => {
+           if (value) {
+@@ -143,21 +143,19 @@ export const AudioRecorder = ({
+   };
+ 
+   const createAudioFile = async (value: string) => {
+-    const cleanPath =
+-      Platform.select({
+-        ios: value.replace('file://', ''),
+-        android: value.replace(/\/\/+/g, '/'),
+-      }) || value;
++    // Android's recorder returns file:////data/... for an absolute cache path.
++    // The filesystem expects a path, while the multipart upload expects a URI.
++    const cleanPath = value.replace(/^file:\/+/, '/');
+     let finalPath = cleanPath;
+     const stats = await ReactNativeBlobUtil.fs.stat(finalPath);
+ 
+     if (Platform.OS === 'android') {
+       return {
+-        uri: finalPath,
++        uri: `file://${finalPath}`,
+         originalPath: finalPath,
+-        type: 'audio/aac',
+-        fileName: `audio-${localRecordedAudioCacheFilePaths.length}.aac`,
+-        name: `audio-${localRecordedAudioCacheFilePaths.length}.aac`,
++        type: 'audio/mp4',
++        fileName: `audio-${localRecordedAudioCacheFilePaths.length}.m4a`,
++        name: `audio-${localRecordedAudioCacheFilePaths.length}.m4a`,
+         fileSize: stats.size,
+       };
+     }
 diff --git a/src/store/auth/authService.ts b/src/store/auth/authService.ts
 index c090166..76f1816 100644
 --- a/src/store/auth/authService.ts
