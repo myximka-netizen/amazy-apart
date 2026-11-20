@@ -1,0 +1,806 @@
+diff --git a/app.config.ts b/app.config.ts
+index 57feb43..1c4dafb 100644
+--- a/app.config.ts
++++ b/app.config.ts
+@@ -1,14 +1,16 @@
+ import { ConfigContext, ExpoConfig } from 'expo/config';
+ 
++import deployment from './amazy.json';
++
+ export default ({ config }: ConfigContext): ExpoConfig => {
+   return {
+-    name: 'Chatwoot',
+-    slug: process.env.EXPO_PUBLIC_APP_SLUG || 'chatwoot-mobile',
+-    version: '4.11.5',
++    name: deployment.name,
++    slug: 'volshebno-tut-crm',
++    version: deployment.version,
+     orientation: 'portrait',
+     icon: './assets/icon.png',
+     userInterfaceStyle: 'automatic',
+-    scheme: 'chatwootapp',
++    scheme: deployment.scheme,
+     ios: {
+       supportsTablet: true,
+       bundleIdentifier: 'com.chatwoot.app',
+@@ -30,8 +32,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
+       associatedDomains: ['applinks:app.chatwoot.com'],
+     },
+     android: {
+-      adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#ffffff' },
+-      package: 'com.chatwoot.app',
++      adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#FAF7F2' },
++      package: deployment.package,
++      versionCode: deployment.versionCode,
++      allowBackup: false,
+       permissions: [
+         'android.permission.CAMERA',
+         'android.permission.RECORD_AUDIO',
+@@ -42,7 +46,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
+         'android.permission.MANAGE_OWN_CALLS',
+       ],
+       // Please use the relative path to the google-services.json file
+-      googleServicesFile: process.env.EXPO_PUBLIC_ANDROID_GOOGLE_SERVICES_FILE,
++      googleServicesFile: './google-services.json',
+       intentFilters: [
+         {
+           action: 'VIEW',
+@@ -50,9 +54,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
+           data: [
+             {
+               scheme: 'https',
+-              host: 'app.chatwoot.com',
++              host: deployment.host,
+               pathPrefix: '/app/accounts/',
+-              pathPattern: '/*/conversations/*',
+             },
+           ],
+           category: ['BROWSABLE', 'DEFAULT'],
+@@ -61,7 +64,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
+           action: 'VIEW',
+           data: [
+             {
+-              scheme: 'chatwootapp',
++              scheme: deployment.scheme,
+             },
+           ],
+           category: ['BROWSABLE', 'DEFAULT'],
+@@ -74,7 +77,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
+         storybookEnabled: process.env.EXPO_STORYBOOK_ENABLED,
+       },
+     },
+-    owner: 'chatwoot',
+     plugins: [
+       'expo-font',
+       'expo-image',
+@@ -84,8 +86,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
+         {
+           image: './assets/splash.png',
+           resizeMode: 'contain',
+-          backgroundColor: '#ffffff',
+-          enableFullScreenImage_legacy: true,
++          backgroundColor: '#FAF7F2',
++          imageWidth: 160,
+         },
+       ],
+       [
+diff --git a/src/constants/index.ts b/src/constants/index.ts
+index 27a9d50..99d5e14 100644
+--- a/src/constants/index.ts
++++ b/src/constants/index.ts
+@@ -203,7 +203,8 @@ export const URL_REGEX = {
+   CONVERSATION: 'app/accounts/[-0-9]+/conversations/[-0-9]',
+ };
+ 
+-export const SSO_CALLBACK_URL = 'chatwootapp://auth/saml';
++import deployment from '../../amazy.json';
++export const SSO_CALLBACK_URL = `${deployment.scheme}://auth/saml`;
+ 
+ export const CONVERSATION_TOGGLE_STATUS = {
+   open: 'RESOLVE',
+diff --git a/src/i18n/index.js b/src/i18n/index.js
+index 3b799b7..ee6eccc 100644
+--- a/src/i18n/index.js
++++ b/src/i18n/index.js
+@@ -35,7 +35,7 @@ import vi from './vi.json';
+ import zh_CN from './zh_CN.json';
+ import zh_TW from './zh_TW.json';
+ 
+-i18n.locale = 'en';
++i18n.locale = 'ru';
+ i18n.fallbacks = true;
+ i18n.translations = {
+   af,
+diff --git a/src/i18n/ru.json b/src/i18n/ru.json
+index 352391e..c197186 100644
+--- a/src/i18n/ru.json
++++ b/src/i18n/ru.json
+@@ -39,7 +39,17 @@
+     "SETTINGS": "Настройки",
+     "CHANGE_LANGUAGE": "Изменить язык",
+     "TERMS": "Условия использования",
+-    "CHANGE_URL": "Изменить URL"
++    "CHANGE_URL": "Изменить URL",
++    "LOGIN_VIA_SSO": "Войти через SSO",
++    "SSO_AUTH_FAILED": "Не удалось войти через SSO. Проверьте учётные данные и попробуйте снова.",
++    "SSO_INVALID_RESPONSE": "Некорректный ответ сервера SSO. Попробуйте снова.",
++    "SSO_UNEXPECTED_ERROR": "Ошибка входа через SSO. Попробуйте снова.",
++    "MFA_SETUP_REQUIRED": {
++      "TITLE": "Требуется двухфакторная аутентификация",
++      "MESSAGE": "Для этого аккаунта нужна двухфакторная аутентификация. Настройте её в веб-версии Chatwoot и вернитесь сюда.",
++      "OPEN_WEB": "Открыть веб-версию",
++      "DISMISS": "ОК"
++    }
+   },
+   "FORGOT_PASSWORD": {
+     "EMAIL": "Пожалуйста, введите ваш email",
+@@ -53,7 +63,24 @@
+   "CONVERSATION": {
+     "HEADER": {
+       "TITLE": "Разговоры",
+-      "CLEAR_FILTER": "Сбросить"
++      "CLEAR_FILTER": "Сбросить",
++      "SEARCH": "Поиск",
++      "FILTER": "Фильтр",
++      "CLOSE": "Закрыть",
++      "SELECT_ALL": "Выбрать всё",
++      "SELECT_ALL_TITLE": "Выбрать всё",
++      "DESELECT_ALL": "Снять выделение",
++      "SELECT_ITEMS": "Выбрать элементы",
++      "SELECTED_COUNT": "Выбрано %{count}",
++      "DONE": "Готово",
++      "MORE": "Ещё",
++      "BACK_TO_MESSAGES": "К сообщениям",
++      "BACK": "Назад",
++      "VOICE_CALL_FAILED": "Не удалось начать звонок.",
++      "WHATSAPP_CALL_FAILED": "Не удалось начать звонок WhatsApp.",
++      "WHATSAPP_CALL_PERMISSION_REQUESTED": "Контакту отправлен запрос на звонок. Попробуйте снова после подтверждения.",
++      "WHATSAPP_CALL_PERMISSION_PENDING": "Запрос уже отправлен. Дождитесь подтверждения контакта.",
++      "CALL_UNAVAILABLE": "Начать звонок можно в веб-версии."
+     },
+     "FILTERS": {
+       "AGENT": {
+@@ -87,7 +114,8 @@
+           "UNASSIGNED": "Неназначен",
+           "ALL": "Все"
+         }
+-      }
++      },
++      "RESET": "Сбросить фильтры"
+     },
+     "ASSIGNEE": {
+       "LABELS": {
+@@ -135,13 +163,18 @@
+       "TITLE": "Не удалось получить диалог",
+       "RETRY": "Повторить",
+       "BACK_TO_HOME": "Вернуться на главную",
+-      "DESCRIPTION": "Похоже, этот разговор не удалось корректно загрузить. Возможно, это вызвано проблемой сети или разговор больше недоступен. Пожалуйста, нажмите кнопку “Повторить попытку”, чтобы попробовать снова."
++      "DESCRIPTION": "Похоже, этот разговор не удалось корректно загрузить. Возможно, это вызвано проблемой сети или разговор больше недоступен. Пожалуйста, нажмите кнопку “Повторить попытку”, чтобы попробовать снова.",
++      "CLOSE": "Закрыть",
++      "PANE_DESCRIPTION": "Проверьте соединение и попробуйте снова. Возможно, диалог удалён или перемещён."
+     },
+     "BOT": "Бот",
+     "EMAIL_HEAD": {
+       "TO": "Кому",
+       "CC": "Cc",
+-      "BCC": "Bcc"
++      "BCC": "Bcc",
++      "CC_BCC": "Копия и скрытая копия",
++      "REMOVE_CC": "Убрать копию и скрытую копию",
++      "REMOVE_BCC": "Убрать скрытую копию"
+     },
+     "SELF_ASSIGN": "Назначить мне",
+     "UN_ASSIGN": "Отменить беседу",
+@@ -216,7 +249,8 @@
+     "LONG_PRESS_ACTIONS": {
+       "COPY": "Копировать",
+       "REPLY": "Ответить",
+-      "DELETE_MESSAGE": "Удалить сообщение"
++      "DELETE_MESSAGE": "Удалить сообщение",
++      "TRANSLATE": "Перевести"
+     },
+     "EMAIL_HEADER": {
+       "FROM": "От",
+@@ -240,6 +274,144 @@
+         "EMPTY": "Приоритет не добавлен",
+         "EDIT": "Редактировать"
+       }
++    },
++    "BULK": {
++      "LABEL": "Метка",
++      "ASSIGN": "Назначить",
++      "STATUS": "Статус",
++      "ADD_LABEL": "Добавить метку",
++      "ASSIGN_TO": "Назначить оператору",
++      "SEARCH_AGENTS": "Поиск операторов",
++      "SEARCH_LABELS": "Поиск меток"
++    },
++    "SPLIT_VIEW": {
++      "EMPTY": "Выберите диалог для просмотра"
++    },
++    "EXPAND_REPLY": "Развернуть ответ",
++    "COMPOSE": {
++      "REPLY": "Ответить",
++      "PRIVATE_NOTE": "Внутренняя заметка",
++      "CLOSE": "Закрыть",
++      "SEND": "Отправить"
++    },
++    "PRIVATE_NOTE_SHORT": "Внутренняя заметка",
++    "RESOLVE": "Завершить",
++    "REOPEN": "Открыть снова",
++    "OPEN": "Открыть",
++    "AUDIO_NOT_AVAILABLE": "Не удалось загрузить аудио",
++    "FILE_LOAD_ERROR": "Не удалось загрузить файл",
++    "FILE_PREVIEW_ERROR": "Не удалось открыть предпросмотр",
++    "REQUIRED_ATTRIBUTES": {
++      "TITLE": "Обязательные сведения",
++      "INTRO_ONE": "Заполните поле, чтобы завершить диалог. При закрытии окна изменения будут потеряны.",
++      "INTRO_OTHER": "Заполните обязательные поля (%{count}), чтобы завершить диалог. При закрытии окна изменения будут потеряны.",
++      "NEEDS_ATTENTION_ONE": "Для завершения диалога осталось заполнить одно поле.",
++      "NEEDS_ATTENTION_OTHER": "Осталось заполнить обязательных полей — %{count}.",
++      "ALL_FILLED": "Все поля заполнены. Теперь диалог можно завершить.",
++      "RESOLVE": "Завершить диалог",
++      "SAVE_ERROR": "Не удалось сохранить атрибуты. Попробуйте снова.",
++      "RESOLVE_ERROR": "Атрибуты сохранены. Завершить диалог не удалось. Попробуйте снова.",
++      "SEARCH_OPTIONS": "Поиск по вариантам (%{count})",
++      "DISCARD": {
++        "TITLE": "Отменить изменения?",
++        "MESSAGE": "Введённые значения будут потеряны.",
++        "KEEP_EDITING": "Продолжить редактирование",
++        "CONFIRM": "Отменить изменения"
++      },
++      "PLACEHOLDERS": {
++        "REQUIRED": "Обязательно",
++        "SELECT": "Выбрать",
++        "CHOOSE": "Выбрать",
++        "TYPE_HERE": "Введите текст",
++        "NUMBER": "0,00",
++        "LINK": "https://",
++        "DATE": "Выберите дату",
++        "CHOOSE_OPTION": "Выберите вариант"
++      },
++      "CHECKBOX": {
++        "YES": "Да",
++        "NO": "Нет"
++      },
++      "VALIDATIONS": {
++        "REQUIRED": "Введите допустимое значение",
++        "INVALID_URL": "Некорректная ссылка",
++        "INVALID_NUMBER": "Введите корректное число",
++        "INVALID_INPUT": "Некорректное значение"
++      },
++      "BULK": {
++        "ALL_MISSING": "Чтобы завершить диалоги, заполните обязательные поля",
++        "PARTIAL_SUCCESS": "Часть диалогов осталась открытой из-за незаполненных обязательных полей"
++      }
++    },
++    "FAILED_TO_SEND": "Не удалось отправить",
++    "RETRY_MESSAGE": "Повторить",
++    "RETRY_MESSAGE_ERROR": "Не удалось отправить сообщение повторно",
++    "TRANSLATE_SUCCESS": "Сообщение переведено",
++    "TRANSLATE_ERROR": "Не удалось перевести сообщение",
++    "VIEW_ORIGINAL": "Показать оригинал",
++    "VIEW_TRANSLATED": "Показать перевод",
++    "VOICE_CALL": {
++      "INCOMING_CALL": "Входящий звонок",
++      "OUTGOING_CALL": "Исходящий звонок",
++      "CALL_IN_PROGRESS": "Идёт разговор",
++      "NO_ANSWER_OUTBOUND_LABEL": "Нет ответа",
++      "NO_ANSWER_OUTBOUND_SUBTEXT": "Контакт не ответил",
++      "MISSED_CALL": "Пропущенный звонок",
++      "JOIN_CALL": "Присоединиться к звонку",
++      "CALL_BACK": "Перезвонить",
++      "MISSED_CALL_INBOUND_SUBTEXT": "Никто из операторов не ответил",
++      "MISSED_CALL_DECLINED_BY": "Звонок отклонил оператор %{agentName}",
++      "MISSED_CALL_OUTSIDE_HOURS": "Вне рабочего времени",
++      "CALL_ENDED": "Звонок завершён",
++      "HANDLED_BY": "Звонок принял оператор %{agentName}",
++      "NOT_ANSWERED_YET": "Ожидает ответа",
++      "CALLING": "Звоним…",
++      "TRANSCRIPT": "Расшифровка",
++      "TRANSCRIPT_SHOW_MORE": "Показать больше",
++      "TRANSCRIPT_SHOW_LESS": "Свернуть"
++    },
++    "VOICE_WIDGET": {
++      "INCOMING_CALL": "Входящий звонок",
++      "UNKNOWN_CALLER": "Неизвестный абонент",
++      "END_CALL_TO_SWITCH_ACCOUNT": "Завершите звонок для смены аккаунта",
++      "MICROPHONE_BLOCKED_TITLE": "Доступ к микрофону отключён",
++      "MICROPHONE_BLOCKED_BODY": "Разрешите приложению использовать микрофон в настройках, чтобы совершать и принимать звонки.",
++      "OPEN_SETTINGS": "Открыть настройки",
++      "NOT_NOW": "Позже",
++      "REJECT_CALL": "Отклонить",
++      "JOIN_CALL": "Ответить",
++      "END_CALL": "Завершить звонок",
++      "GO_TO_CONVERSATION": "Открыть диалог",
++      "ANSWER_UNAVAILABLE": "Ответить на этот звонок можно в веб-версии.",
++      "REJECT_FAILED": "Не удалось отклонить звонок",
++      "CALLING": "Звоним…",
++      "RINGING": "Вызов…",
++      "CONNECTING": "Соединяем…",
++      "MUTE": "Выключить микрофон",
++      "UNMUTE": "Включить микрофон",
++      "SPEAKER": "Динамик",
++      "AUDIO_ROUTE": "Звук",
++      "ON_HOLD": "На удержании",
++      "RESUME": "Продолжить",
++      "INCOMING_CALLS_COUNT": "Входящие звонки (%{count})",
++      "END_AND_ANSWER": "Завершить и ответить",
++      "SILENCE_ALL": "Отключить звонок у меня для всех вызовов",
++      "ANSWERING_ENDS_CURRENT": "При ответе текущий звонок завершится",
++      "ANSWERING_THIS_ENDS_CURRENT": "При ответе на этот вызов текущий звонок завершится",
++      "TAP_HINT": "Нажмите на звонок, чтобы ответить или отклонить его. При отключении звука у вас вызовы продолжат поступать другим операторам.",
++      "RINGING_FOR": "Вызов длится %{duration}",
++      "CALL_SCREEN_TITLE": "Аудиозвонок Chatwoot",
++      "VIEW": "Посмотреть",
++      "HOLD": "Удерживать",
++      "ROUTE_EARPIECE": "Разговорный динамик",
++      "ROUTE_SPEAKER": "Динамик",
++      "ROUTE_BLUETOOTH": "Bluetooth",
++      "ROUTE_WIRED": "Проводная гарнитура",
++      "ANSWERED_ELSEWHERE": "Другой оператор уже ответил.",
++      "CALL_ALREADY_ENDED": "Абонент завершил вызов до вашего ответа.",
++      "JOIN_FAILED": "Не удалось установить соединение.",
++      "MINIMISE": "Свернуть звонок",
++      "RETURN_TO_CALL": "Вернуться к звонку"
+     }
+   },
+   "FILTER": {
+@@ -274,7 +446,18 @@
+     "LOGOUT": "Выход",
+     "SUBMIT": "Отправить",
+     "SET_LANGUAGE": "Установить язык",
+-    "DEBUG_ACTIONS": "Действия отладки"
++    "DEBUG_ACTIONS": "Действия отладки",
++    "AVAILABILITY_ERROR": "Не удалось изменить статус. Попробуйте снова.",
++    "AVAILABILITY": "Доступность",
++    "STATUS": "Статус",
++    "RECEIVE_CONVERSATIONS": "Принимать диалоги",
++    "RECEIVE_VOICE_CALLS": "Принимать голосовые вызовы",
++    "WORK_PAUSED": "Новые диалоги и звонки появятся, когда вы вернётесь в статус «В сети».",
++    "APPEARANCE": "Оформление",
++    "APPEARANCE_SYSTEM": "Как на устройстве",
++    "APPEARANCE_LIGHT": "Светлая",
++    "APPEARANCE_DARK": "Тёмная",
++    "APPEARANCE_SYSTEM_DESCRIPTION": "Тема меняется вместе с системной."
+   },
+   "NOTIFICATION": {
+     "HEADER_TITLE": "Уведомления",
+@@ -293,7 +476,8 @@
+       "PARTICIPATING_CONVERSATION_NEW_MESSAGE": "Новое сообщение в диалоге, в котором вы участвуете",
+       "SLA_MISSED_FIRST_RESPONSE": "Не выполнен целевой срок разрешения по SLA для разговора",
+       "SLA_MISSED_NEXT_RESPONSE": "Не выполнен целевой срок следующего ответа по SLA для разговора",
+-      "SLA_MISSED_RESOLUTION": "Не выполнен целевой срок первого ответа по SLA для разговора"
++      "SLA_MISSED_RESOLUTION": "Не выполнен целевой срок первого ответа по SLA для разговора",
++      "VOICE_CALL_MISSED": "Пропущенный звонок"
+     },
+     "FILTERS": {
+       "SORT_BY": {
+@@ -312,7 +496,8 @@
+       "MARK_ALL_READ": "Все уведомления отмечены как прочитанные",
+       "DELETE_ALL": "Все уведомления удалены",
+       "DELETE_ALL_READ": "Все прочитанные уведомления удалены"
+-    }
++    },
++    "SPLIT_VIEW_EMPTY": "Выберите уведомление, чтобы открыть диалог"
+   },
+   "AVAILABILITY": {
+     "ONLINE": "В сети",
+@@ -330,7 +515,8 @@
+     "CONVERSATION_PARTICIPATING_NEW_MESSAGE_PUSH": "Новое сообщение создано в участвующем диалоге",
+     "CONVERSATION_SLA_MISSED_FIRST_RESPONSE": "Разговор не соответствует SLA по первому ответу",
+     "CONVERSATION_SLA_MISSED_NEXT_RESPONSE": "Диалог не соответствует SLA по следующему ответу",
+-    "CONVERSATION_SLA_MISSED_RESOLUTION": "Диалог не соответствует SLA по разрешению"
++    "CONVERSATION_SLA_MISSED_RESOLUTION": "Диалог не соответствует SLA по разрешению",
++    "VOICE_CALL_MISSED": "Пропущен звонок"
+   },
+   "CONVERSATION_DETAILS": {
+     "TITLE": "Свойства",
+@@ -348,7 +534,12 @@
+     "PHONE_NUMBER": "Номер телефона",
+     "CALL": "Вызов",
+     "CONTACT_ATTRIBUTES": "Атрибуты контакта",
+-    "VALUE_UNAVAILABLE": "Я не работаю в этот день"
++    "VALUE_UNAVAILABLE": "Я не работаю в этот день",
++    "PHONE": "Телефон",
++    "CALL_OPTIONS_TITLE": "Как позвонить",
++    "PHONE_DIALER": "Набрать номер",
++    "LOCATION": "Местоположение",
++    "COMPANY": "Компания"
+   },
+   "CONVERSATION_PARTICIPANTS": {
+     "TITLE": "Участники",
+@@ -409,7 +600,11 @@
+     "OfFLINE": "Вы должны подключиться к Wi-fi или сотовой сети, чтобы снова подключиться к сети",
+     "CANNOT_FETCH": "При получении информации произошла ошибка. Повторите попытку",
+     "AUTH": "Неверное имя пользователя / пароль. Пожалуйста, попробуйте еще раз",
+-    "NO_ACCOUNTS_MESSAGE": "У вас нет доступа ни к одной учетной записи chatwoot"
++    "NO_ACCOUNTS_MESSAGE": "У вас нет доступа ни к одной учетной записи chatwoot",
++    "UNABLE_TO_OPEN_LINK": "Не удалось открыть ссылку",
++    "UNEXPECTED_TITLE": "Произошла ошибка",
++    "UNEXPECTED_DESCRIPTION": "В приложении произошла ошибка. Попробуйте снова.",
++    "TRY_AGAIN": "Попробовать снова"
+   },
+   "SUCCESS": {
+     "AUTH": "Вход выполнен"
+@@ -429,7 +624,8 @@
+     "TWILIO_WHATSAPP_CAN_REPLY": "Вы можете ответить в этой беседе только с помощью шаблона сообщения",
+     "TWILIO_WHATSAPP_24_HOURS_WINDOW": "Ограничение на 24 часа",
+     "24_HOURS_WINDOW": "Ограничение на 24 часа",
+-    "CANNOT_REPLY": "Вы не можете ответить из-за"
++    "CANNOT_REPLY": "Вы не можете ответить из-за",
++    "ANONYMOUS_CALLER_CANNOT_REPLY": "Номер абонента недоступен. Отправить сообщение невозможно."
+   },
+   "SLA": {
+     "FRT": "FRT",
+@@ -459,6 +655,105 @@
+     },
+     "EXECUTION_SUCCESS": "Макрос успешно выполнен",
+     "EXECUTION_ERROR": "Выполнение макроса не удалось",
+-    "NO_MACROS": "Макросы не найдены"
++    "NO_MACROS": "Макросы не найдены",
++    "EXECUTED_WITHOUT_RESOLVING": "Макрос выполнен. Заполните обязательные поля, чтобы завершить диалог."
++  },
++  "MFA": {
++    "TITLE": "Двухфакторная аутентификация",
++    "CANCEL": "Отмена и возврат ко входу",
++    "EMAIL": {
++      "TITLE": "Проверьте почту",
++      "DESCRIPTION": "Вы входите с нового устройства.",
++      "INSTRUCTIONS": "Введите шестизначный код из письма",
++      "REMEMBER_DEVICE": "Запомнить устройство на 30 дней"
++    },
++    "TABS": {
++      "AUTHENTICATOR_APP": "Приложение-аутентификатор",
++      "BACKUP_CODE": "Резервный код"
++    },
++    "INSTRUCTIONS": {
++      "AUTHENTICATOR": "Введите шестизначный код из приложения-аутентификатора",
++      "BACKUP": "Введите один из резервных кодов"
++    },
++    "PLACEHOLDERS": {
++      "BACKUP_CODE": "Введите резервный код"
++    },
++    "BUTTONS": {
++      "VERIFY": "Подтвердить",
++      "VERIFYING": "Проверяем…"
++    }
++  },
++  "CONVERSATION_ATTACHMENT": {
++    "OPTIONS": {
++      "PHOTOS": "Фото",
++      "CAMERA": "Камера",
++      "ATTACH_FILE": "Прикрепить файл",
++      "MACROS": "Макросы",
++      "WHATSAPP_TEMPLATES": "Шаблоны WhatsApp"
++    }
++  },
++  "CONTACT_LABELS": {
++    "TITLE": "Метки контакта",
++    "ADD_LABEL": "Добавить метки",
++    "EMPTY_LIST": "Сначала добавьте метки в аккаунт",
++    "NO_LABEL": "Метки не назначены",
++    "UPDATE_LABEL": "Метка обновлена",
++    "SELECTED": "Выбранные",
++    "NOT_SELECTED": "Нет выбранных меток",
++    "NO_RESULT": "Метки не найдены"
++  },
++  "CONTENT_TEMPLATE": {
++    "TITLE": "Шаблоны",
++    "SELECT_TEMPLATE": "Выберите шаблон WhatsApp",
++    "VARIABLES": "Переменные",
++    "SEND": "Отправить",
++    "NO_TEMPLATES": "Нет доступных шаблонов",
++    "NO_RESULTS": "Подходящие шаблоны не найдены",
++    "SEARCH_PLACEHOLDER": "Найдите шаблон для отправки",
++    "IMAGE_URL": "Ссылка на изображение",
++    "VIDEO_URL": "Ссылка на видео",
++    "DOCUMENT_URL": "Ссылка на документ",
++    "MEDIA_URL": "Ссылка на медиафайл",
++    "IMAGE_URL_PLACEHOLDER": "https://...",
++    "MEDIA_URL_PLACEHOLDER": "https://...",
++    "IMAGE_PREVIEW_FAILED": "Не удалось загрузить изображение по ссылке",
++    "DOCUMENT_NAME": "Название документа",
++    "DOCUMENT_NAME_PLACEHOLDER": "Имя файла (необязательно)",
++    "BUTTON_PARAMETERS": "Параметры кнопки"
++  },
++  "SEARCH": {
++    "PLACEHOLDER": "Введите минимум два символа",
++    "HINT": "Ищите по номеру диалога, почте, телефону или тексту сообщения.",
++    "ALL_RESULTS": "Все результаты",
++    "RECENT_SEARCHES": "Недавние запросы",
++    "CLEAR_ALL": "Очистить всё",
++    "VIEW_MORE": "Показать ещё",
++    "TAP_TO_RETRY": "Нажмите, чтобы повторить",
++    "NO_RESULTS": "По запросу «{{searchQuery}}» в разделе «{{sectionLabel}}» ничего не найдено",
++    "ERROR_CANCELLED": "Не удалось загрузить результаты.",
++    "ERROR_GENERIC": "Произошла ошибка. Попробуйте снова.",
++    "SECTIONS": {
++      "CONTACTS": "Контакты",
++      "CONVERSATIONS": "Диалоги",
++      "MESSAGES": "Сообщения"
++    }
++  },
++  "COPILOT": {
++    "IMPROVE_REPLY": "Улучшить ответ",
++    "CHANGE_TONE": "Изменить тон",
++    "FIX_GRAMMAR": "Исправить грамматику",
++    "SUGGEST_REPLY": "Предложить ответ",
++    "SUMMARIZE": "Подвести итог диалога",
++    "SUMMARIZE_SHORT": "Подвести итог",
++    "THINKING": "Copilot готовит ответ",
++    "FOLLOW_UP_PLACEHOLDER": "Отправить уточнение или дополнительный запрос",
++    "SELECT_TONE": "Выбрать тон",
++    "TONE_PROFESSIONAL": "Деловой",
++    "TONE_FRIENDLY": "Дружелюбный",
++    "TONE_STRAIGHTFORWARD": "Прямой",
++    "TONE_CASUAL": "Неформальный",
++    "TONE_CONFIDENT": "Уверенный",
++    "GENERATION_FAILED": "Не удалось подготовить текст. Попробуйте снова.",
++    "FOLLOW_UP_FAILED": "Не удалось отправить уточнение. Попробуйте снова."
+   }
+ }
+diff --git a/src/navigation/index.tsx b/src/navigation/index.tsx
+index 9c22981..c9b12a7 100644
+--- a/src/navigation/index.tsx
++++ b/src/navigation/index.tsx
+@@ -36,7 +36,7 @@ import { APP_FONTS } from '@/theme/fonts';
+ setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
+   // Native code already handles call pushes.
+   if (isCallPush(remoteMessage.data)) return;
+-  console.log('Message handled in the background!', remoteMessage);
++  // Firebase displays notification messages while the app is in the background.
+ });
+ 
+ export const AppNavigationContainer = () => {
+@@ -70,7 +70,7 @@ export const AppNavigationContainer = () => {
+     getStateFromPath: (path: string, config: Parameters<typeof getStateFromPath>[1]) => {
+       // Handle SSO callback - App running, receives deep link
+       if (path.includes(SSO_CALLBACK_URL) || path.includes('auth/saml')) {
+-        const ssoParams = SsoUtils.parseCallbackUrl(`chatwootapp://${path}`);
++        const ssoParams = SsoUtils.parseCallbackUrl(`${SSO_CALLBACK_URL.split(':')[0]}://${path}`);
+         // Handle both success and error cases
+         SsoUtils.handleSsoCallback(ssoParams, dispatch);
+         // Return undefined to prevent navigation change for SSO callback
+diff --git a/src/navigation/tabs/Tabs.tsx b/src/navigation/tabs/Tabs.tsx
+index e01a5a9..0b5b866 100644
+--- a/src/navigation/tabs/Tabs.tsx
++++ b/src/navigation/tabs/Tabs.tsx
+@@ -1,5 +1,6 @@
+ import { useTailwind } from '@/theme/useTailwind';
+ import { useCallback, useEffect, useRef } from 'react';
++import { getMessaging, onTokenRefresh } from '@react-native-firebase/messaging';
+ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+ 
+ import { authActions } from '@/store/auth/authActions';
+@@ -71,6 +72,7 @@ export const Tabs = () => {
+     initAnalytics();
+     initSentry();
+     initPushNotifications();
++    return onTokenRefresh(getMessaging(), () => { dispatch(settingsActions.saveDeviceDetails()); });
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, []);
+ 
+@@ -149,8 +151,7 @@ export const Tabs = () => {
+ 
+   useEffect(() => {
+     checkAppVersion();
+-    // eslint-disable-next-line react-hooks/exhaustive-deps
+-  }, []);
++  }, [checkAppVersion]);
+ 
+   return (
+     <SideToolbarProvider>
+diff --git a/src/store/auth/authService.ts b/src/store/auth/authService.ts
+index c090166..76f1816 100644
+--- a/src/store/auth/authService.ts
++++ b/src/store/auth/authService.ts
+@@ -17,6 +17,18 @@ import type {
+   WorkPreferencesPayload,
+ } from './authTypes';
+ 
++import deployment from '../../../amazy.json';
++
++// Apply the CRM account only when opening a new session on this installation.
++function initialUser(user: User | undefined, baseURL?: string): User {
++  if (!user) throw new Error('Missing profile in sign-in response');
++  if (baseURL === `https://${deployment.host}/` &&
++      user.accounts?.some(account => Number(account.id) === deployment.accountId)) {
++    return { ...user, account_id: deployment.accountId };
++  }
++  return user;
++}
++
+ export class AuthService {
+   static async login(
+     credentials: LoginPayload,
+@@ -38,7 +50,7 @@ export class AuthService {
+ 
+     // Regular login response
+     return {
+-      user: response.data.data,
++      user: initialUser(response.data.data, response.config?.baseURL),
+       headers: {
+         'access-token': response.headers['access-token'],
+         uid: response.headers.uid,
+@@ -59,7 +71,7 @@ export class AuthService {
+     }
+ 
+     return {
+-      user: response.data.data as User,
++      user: initialUser(response.data.data as User, response.config?.baseURL),
+       headers: {
+         'access-token': response.headers['access-token'],
+         uid: response.headers.uid,
+@@ -93,7 +105,7 @@ export class AuthService {
+   static async loginWithSso(payload: SsoAuthPayload): Promise<SsoAuthResponse> {
+     const response = await apiService.post<{ data: User }>('auth/sign_in', payload);
+     return {
+-      user: response.data.data,
++      user: initialUser(response.data.data, response.config?.baseURL),
+       headers: {
+         'access-token': response.headers['access-token'],
+         uid: response.headers.uid,
+diff --git a/src/store/auth/specs/authService.spec.ts b/src/store/auth/specs/authService.spec.ts
+index 4937d83..a3208a6 100644
+--- a/src/store/auth/specs/authService.spec.ts
++++ b/src/store/auth/specs/authService.spec.ts
+@@ -52,6 +52,20 @@ describe('AuthService', () => {
+       });
+     });
+ 
++    it.each([
++      ['https://desktop-to6ives.taile101ff.ts.net/', [{ id: 2 }], 2],
++      ['https://desktop-to6ives.taile101ff.ts.net/', [{ id: 3 }], 123],
++      ['https://another.example/', [{ id: 2 }], 123],
++    ])('selects only an available CRM account on its own host', async (baseURL, accounts, expected) => {
++      (apiService.post as jest.Mock).mockResolvedValueOnce({
++        data: { data: { ...mockUser, accounts } },
++        headers: mockHeaders,
++        config: { baseURL },
++      });
++      const result = await AuthService.login({ email: 'test@example.com', password: 'password' });
++      expect(result).toMatchObject({ user: { account_id: expected } });
++    });
++
+     it('returns a setup marker without a session when the account enforces MFA', async () => {
+       const credentials = { email: 'test@example.com', password: 'password' };
+       (apiService.post as jest.Mock).mockResolvedValueOnce({
+diff --git a/src/store/settings/settingsSlice.ts b/src/store/settings/settingsSlice.ts
+index 0fb4dbc..e238e48 100644
+--- a/src/store/settings/settingsSlice.ts
++++ b/src/store/settings/settingsSlice.ts
+@@ -4,6 +4,9 @@ import * as RootNavigation from '@/utils/navigationUtils';
+ import { NotificationSettings } from './settingsTypes';
+ import { Theme } from '@/types/common/Theme';
+ 
++import deployment from '../../../amazy.json';
++import { buildWebSocketUrl } from './settingsUtils';
++
+ interface SettingsState {
+   baseUrl: string;
+   installationUrl: string;
+@@ -20,14 +23,14 @@ interface SettingsState {
+   pushToken: string;
+ }
+ const initialState: SettingsState = {
+-  baseUrl: 'app.chatwoot.com',
+-  installationUrl: 'https://app.chatwoot.com/',
++  baseUrl: deployment.host,
++  installationUrl: `https://${deployment.host}/`,
+   uiFlags: {
+     isSettingUrl: false,
+     isUpdating: false,
+     isLocaleSet: false,
+   },
+-  localeValue: 'en',
++  localeValue: 'ru',
+   notificationSettings: {
+     account_id: 0,
+     all_email_flags: [],
+@@ -37,7 +40,7 @@ const initialState: SettingsState = {
+     selected_push_flags: [],
+     user_id: 0,
+   },
+-  webSocketUrl: 'wss://app.chatwoot.com/cable',
++  webSocketUrl: buildWebSocketUrl(deployment.host),
+   theme: 'system',
+   version: '',
+   pushToken: '',
+diff --git a/src/store/specs/persistConfig.spec.ts b/src/store/specs/persistConfig.spec.ts
+index 75eb38a..7871339 100644
+--- a/src/store/specs/persistConfig.spec.ts
++++ b/src/store/specs/persistConfig.spec.ts
+@@ -1,3 +1,4 @@
++import deployment from '../../../amazy.json';
+ import AsyncStorage from '@react-native-async-storage/async-storage';
+ import * as Sentry from '@sentry/react-native';
+ 
+@@ -112,7 +113,7 @@ describe('store persistence', () => {
+     const { store } = await loadStore();
+ 
+     expect(store.getState().auth.accessToken).toBeNull();
+-    expect(store.getState().settings.installationUrl).toBe('https://app.chatwoot.com/');
++    expect(store.getState().settings.installationUrl).toBe(`https://${deployment.host}/`);
+   });
+ 
+   it('clears the saved session on logout and keeps the server', async () => {
+diff --git a/src/utils/pushUtils.ts b/src/utils/pushUtils.ts
+index d658b02..5e553cb 100644
+--- a/src/utils/pushUtils.ts
++++ b/src/utils/pushUtils.ts
+@@ -44,7 +44,7 @@ export const findConversationLinkFromPush = ({
+     if (conversationId) {
+       // Older servers omit accountId; fall back to the active account so the link stays valid.
+       const accountId = notification.accountId ?? currentAccountId;
+-      const conversationLink = `${installationUrl}/app/accounts/${accountId}/conversations/${conversationId}/${primaryActorId}/${primaryActorType}`;
++      const conversationLink = `${installationUrl.replace(/\/+$/, '')}/app/accounts/${accountId}/conversations/${conversationId}/${primaryActorId}/${primaryActorType}`;
+       return conversationLink;
+     }
+   }
+diff --git a/src/utils/specs/errorUtils.spec.ts b/src/utils/specs/errorUtils.spec.ts
+index 0e63273..5c33a9a 100644
+--- a/src/utils/specs/errorUtils.spec.ts
++++ b/src/utils/specs/errorUtils.spec.ts
+@@ -18,11 +18,11 @@ describe('#errorMessage', () => {
+   });
+ 
+   it('falls back when the object has no string message', () => {
+-    expect(errorMessage({ message: { detail: 'nested' } })).toBe('Error');
++    expect(errorMessage({ message: { detail: 'nested' } })).toBe('Ошибка');
+   });
+ 
+   it('falls back for null and undefined', () => {
+-    expect(errorMessage(null)).toBe('Error');
+-    expect(errorMessage(undefined)).toBe('Error');
++    expect(errorMessage(null)).toBe('Ошибка');
++    expect(errorMessage(undefined)).toBe('Ошибка');
+   });
+ });
+diff --git a/src/utils/specs/pushUtils.spec.ts b/src/utils/specs/pushUtils.spec.ts
+index 8d5c4c0..fcecb42 100644
+--- a/src/utils/specs/pushUtils.spec.ts
++++ b/src/utils/specs/pushUtils.spec.ts
+@@ -46,7 +46,7 @@ describe('findConversationLinkFromPush', () => {
+     const transformedNotification = transformNotification(notification);
+     const result = findConversationLinkFromPush({
+       notification: transformedNotification,
+-      installationUrl,
++      installationUrl: installationUrl + '/',
+       currentAccountId: 1,
+     });
+     expect(result).toBe(
+diff --git a/src/utils/ssoUtils.ts b/src/utils/ssoUtils.ts
+index 92ae604..9c324ce 100644
+--- a/src/utils/ssoUtils.ts
++++ b/src/utils/ssoUtils.ts
+@@ -4,6 +4,7 @@ import { authActions } from '@/store/auth/authActions';
+ import { AppDispatch } from '@/store';
+ import { showToast } from './toastUtils';
+ import i18n from '@/i18n';
++import deployment from '../../amazy.json';
+ 
+ WebBrowser.maybeCompleteAuthSession();
+ 
+@@ -25,7 +26,7 @@ export class SsoUtils {
+     try {
+       // Create redirect URI with custom scheme
+       const redirectUri = AuthSession.makeRedirectUri({
+-        scheme: 'chatwootapp',
++        scheme: deployment.scheme,
+         path: 'sso/callback',
+       });
+ 
+diff --git a/with-android-notification-channel.js b/with-android-notification-channel.js
+index dae935b..f5c6e95 100644
+--- a/with-android-notification-channel.js
++++ b/with-android-notification-channel.js
+@@ -1,7 +1,7 @@
+ const { withMainApplication, createRunOncePlugin } = require('@expo/config-plugins');
+ 
+ const CHANNEL_ID = 'default';
+-const CHANNEL_NAME = 'Default';
++const CHANNEL_NAME = 'Сообщения';
+ const MARKER = 'CW-3883 default notification channel';
+ 
+ // The manifest meta-data pointing FCM at this channel comes from the

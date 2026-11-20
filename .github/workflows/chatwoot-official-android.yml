@@ -1,0 +1,157 @@
+name: Official Chatwoot Android
+on:
+  push:
+    branches: [chatwoot-official-android]
+    paths: ['chatwoot-official/**', '.gitmodules', '.github/workflows/chatwoot-official-android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: official-crm-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 105
+    env:
+      CI: 'true'
+      NODE_ENV: production
+      EXPO_NO_TELEMETRY: '1'
+      EXPO_PUBLIC_MINIMUM_CHATWOOT_VERSION: '4.1.0'
+      SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+      SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.2'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Prepare pinned upstream source and Android branding
+        run: bash chatwoot-official/prepare.sh
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+          run_install: false
+      - name: Install locked upstream dependencies
+        working-directory: chatwoot-official/app
+        run: pnpm install --frozen-lockfile --prod=false
+      - name: Run the mobile test suite
+        working-directory: chatwoot-official/app
+        env:
+          NODE_ENV: test
+        run: pnpm exec jest --maxWorkers=2 --silent
+      - name: Generate Android project
+        working-directory: chatwoot-official/app
+        run: |
+          pnpm exec expo prebuild --platform android --no-install
+          python3 ../native.py
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Compile release
+        working-directory: chatwoot-official/app/android
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/.ghcup /opt/ghc
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64 --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx4608m -XX:MaxMetaspaceSize=1024m' --stacktrace
+      - name: Sign and check package, version, alignment, certificate and license
+        env:
+          AMAZY_ANDROID_KEYSTORE_B64: ${{ secrets.AMAZY_ANDROID_KEYSTORE_B64 }}
+          AMAZY_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.AMAZY_ANDROID_KEYSTORE_PASSWORD }}
+        run: bash chatwoot-official/sign.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-crm
+          path: chatwoot-official/dist/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  upgrade:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: signed-crm
+          path: new
+      - name: Retrieve the exact previous signed build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous
+          if gh release view crm-android-v0.7.0 >/dev/null 2>&1; then
+            gh release download crm-android-v0.7.0 --pattern '*.apk' --dir previous
+          else
+            gh run download 44705259517 --name Volshebno-Tut-CRM-v0.7-Signed-APK --dir previous
+          fi
+          mv previous/*.apk previous/baseline.tmp
+          mv previous/baseline.tmp previous/Volshebno-Tut-CRM-0.7.0.apk
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -noaudio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          script: bash chatwoot-official/upgrade-test.sh previous/*.apk new/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-baseline
+          path: previous/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: upgrade
+    if: github.ref == 'refs/heads/chatwoot-official-android'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-baseline
+          path: previous
+      - uses: actions/download-artifact@v4
+        with:
+          name: signed-crm
+          path: new
+      - name: Publish versioned APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view crm-android-v0.7.0 >/dev/null 2>&1; then
+            gh release create crm-android-v0.7.0 previous/*.apk --target 3626ab5001dbd29f04f4a9aff7d0e2b3d72ea6cb --latest=false --title 'Волшебно тут CRM 0.7.0' --notes 'Резервная версия клиента с постоянной подписью.'
+          fi
+          version=$(jq -r .version chatwoot-official/deployment.json)
+          tag="crm-android-v$version"
+          (cd new && sha256sum -c *.sha256)
+          if gh release view "$tag" >/dev/null 2>&1; then
+            [[ $(gh api "repos/$GITHUB_REPOSITORY/commits/$tag" --jq '.sha') == "$GITHUB_SHA" ]]
+            gh release download "$tag" --dir published
+            (cd published && sha256sum -c *.sha256)
+            cmp new/*.sha256 published/*.sha256
+          else
+            gh release create "$tag" new/* --target "$GITHUB_SHA" --prerelease --latest=false --title "Волшебно тут CRM $version" --notes-file chatwoot-official/release-notes.md
+          fi

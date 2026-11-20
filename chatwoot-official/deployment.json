@@ -1,0 +1,10 @@
+{
+  "name": "Волшебно тут CRM",
+  "package": "ru.amazy.crm.nativeclient",
+  "scheme": "amazycrm",
+  "host": "desktop-to6ives.taile101ff.ts.net",
+  "accountId": 2,
+  "version": "0.8.0",
+  "versionCode": 7,
+  "firebaseProject": "volshebno-tut-crm"
+}
