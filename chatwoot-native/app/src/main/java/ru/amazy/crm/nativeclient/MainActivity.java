@@ -28,6 +28,10 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
+import android.widget.FrameLayout;
+import android.content.res.ColorStateList;
+import android.graphics.drawable.RippleDrawable;
+import android.graphics.drawable.Drawable;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -51,16 +55,16 @@ public final class MainActivity extends Activity {
     private static final int PICK_ATTACHMENTS = 33006;
     private static final int MICROPHONE_PERMISSION = 33007;
     // Chatwoot-inspired visual system: quiet white surfaces, slate text, bright blue actions.
-    private static final int NAVY = Color.rgb(31, 41, 55);
-    private static final int BLUE = Color.rgb(31, 147, 255);
-    private static final int PALE = Color.rgb(248, 250, 252);
-    private static final int BORDER = Color.rgb(226, 232, 240);
-    private static final int SECONDARY = Color.rgb(100, 116, 139);
+    private static final int NAVY = Color.rgb(32, 32, 32);
+    private static final int BLUE = Color.rgb(0, 145, 255);
+    private static final int PALE = Color.rgb(246, 246, 246);
+    private static final int BORDER = Color.rgb(235, 235, 235);
+    private static final int SECONDARY = Color.rgb(126, 126, 126);
     private static final int GREEN = Color.rgb(22, 163, 74);
     private static final int AUTO_REFRESH_MS = 15000;
     private static final int NOTE = Color.rgb(255, 245, 211);
 
-    private enum Screen { LOGIN, LIST, CHAT }
+    private enum Screen { LOGIN, LIST, CHAT, INBOX }
     private Screen screen = Screen.LOGIN;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -114,6 +118,10 @@ public final class MainActivity extends Activity {
     private TextView syncLabel;
     private int currentConversation = -1;
     private String currentName = "";
+    private String currentAvatar = "";
+    private String currentChannel = "";
+    private LinearLayout composerPanel;
+    private TextView chatTitle;
     private String currentStatus = "open";
     private boolean loadingMessages = false;
     private ScrollView messageScroll;
@@ -133,6 +141,16 @@ public final class MainActivity extends Activity {
         root = column();
         root.setBackgroundColor(Color.WHITE);
         setContentView(root);
+        if (Build.VERSION.SDK_INT >= 30) {
+            root.setOnApplyWindowInsetsListener((view, insets) -> {
+                android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars() |
+                    android.view.WindowInsets.Type.displayCutout());
+                android.graphics.Insets keyboard = insets.getInsets(android.view.WindowInsets.Type.ime());
+                view.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, keyboard.bottom));
+                return insets;
+            });
+            root.requestApplyInsets();
+        }
         credentials = new SecureTokenStore(this);
         String token = credentials.loadToken();
         if (token == null) showLogin("");
@@ -199,9 +217,22 @@ public final class MainActivity extends Activity {
         t.setText(s);
         t.setTextSize(size);
         t.setTextColor(color);
-        if (strong) t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        t.setFontFeatureSettings("kern");
+        t.setIncludeFontPadding(false);
+        t.setTypeface(Typeface.create(strong ? "sans-serif-medium" : "sans-serif", Typeface.NORMAL));
         t.setGravity(Gravity.CENTER_VERTICAL);
         return t;
+    }
+
+    private GradientDrawable outlined(int color, int radius, int stroke) {
+        GradientDrawable d = bg(color, radius);
+        if (stroke != Color.TRANSPARENT) d.setStroke(dp(1), stroke);
+        return d;
+    }
+
+    private Drawable ripple(int color, int radius, int stroke) {
+        return new RippleDrawable(ColorStateList.valueOf(0x16000000), outlined(color, radius, stroke),
+            bg(Color.WHITE, radius));
     }
 
     private Button button(String s, boolean primary) {
@@ -209,10 +240,83 @@ public final class MainActivity extends Activity {
         b.setText(s);
         b.setTextSize(14);
         b.setAllCaps(false);
-        b.setMinHeight(dp(46));
-        b.setTextColor(primary ? Color.WHITE : BLUE);
-        b.setBackground(bg(primary ? BLUE : PALE, 12));
+        b.setMinHeight(0);
+        b.setMinimumHeight(0);
+        b.setMinWidth(0);
+        b.setMinimumWidth(0);
+        b.setPadding(dp(12), 0, dp(12), 0);
+        b.setIncludeFontPadding(false);
+        b.setGravity(Gravity.CENTER);
+        b.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        b.setStateListAnimator(null);
+        b.setElevation(0);
+        b.setTextColor(primary ? Color.WHITE : NAVY);
+        b.setBackground(ripple(primary ? BLUE : PALE, 9, Color.TRANSPARENT));
         return b;
+    }
+
+    private void setGlyph(Button b, String kind, int color) {
+        if (b == null) return;
+        b.setText("");
+        b.setPadding(0, 0, 0, 0);
+        MobileIcon icon = new MobileIcon(kind, color, dp(22));
+        // Use a full-width centered drawable instead of an emoji glyph or an old-style button.
+        b.setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null);
+        // Android places the drawable at content left; horizontal padding centers it.
+        b.post(() -> {
+            int pad = Math.max(0, (b.getWidth() - dp(22)) / 2);
+            b.setPadding(pad, 0, pad, 0);
+        });
+    }
+
+    private Button glyph(String kind, String accessibility, boolean filled) {
+        Button b = button("", filled);
+        b.setBackground(ripple(filled ? BLUE : Color.TRANSPARENT, 24, Color.TRANSPARENT));
+        b.setContentDescription(accessibility);
+        setGlyph(b, kind, filled ? Color.WHITE : NAVY);
+        return b;
+    }
+
+    private void separator(LinearLayout parent) {
+        View v = new View(this);
+        v.setBackgroundColor(BORDER);
+        parent.addView(v, new LinearLayout.LayoutParams(-1, dp(1)));
+    }
+
+    private FrameLayout avatar(String name, String url, int size, String channel) {
+        FrameLayout wrapper = new FrameLayout(this);
+        int tint = Color.rgb(230, 238, 249);
+        int[] tones = {0xffe3edf9,0xffe7eee3,0xfff4e6dc,0xffede5f6,0xfff3e7ee};
+        if (name != null) tint = tones[Math.floorMod(name.hashCode(), tones.length)];
+        FrameLayout circle = new FrameLayout(this);
+        circle.setBackground(bg(tint, size / 2));
+        circle.setClipToOutline(true);
+        String initials = "";
+        if (name != null) for (String part : name.trim().split("\\s+")) {
+            if (!part.isEmpty()) initials += part.substring(0, 1);
+            if (initials.length() >= 2) break;
+        }
+        TextView fallback = text(initials.toUpperCase(Locale.ROOT), size > 40 ? 16 : 12, 0xff536477, true);
+        fallback.setGravity(Gravity.CENTER);
+        circle.addView(fallback, new FrameLayout.LayoutParams(-1, -1));
+        if (AttachmentMedia.isHttps(url == null ? "" : url)) {
+            ImageView photo = new ImageView(this);
+            photo.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            circle.addView(photo, new FrameLayout.LayoutParams(-1, -1));
+            AttachmentMedia.thumbnail(photo, url);
+        }
+        wrapper.addView(circle, new FrameLayout.LayoutParams(dp(size), dp(size)));
+        if (size >= 44 && channel != null && !channel.isEmpty()) {
+            String lower = channel.toLowerCase(Locale.ROOT);
+            String mark = lower.contains("telegram") ? "➤" : lower.contains("whatsapp") ? "W" :
+                lower.contains("email") ? "@" : lower.contains("api") ? "A" : "·";
+            TextView badge = text(mark, 10, Color.WHITE, true);
+            badge.setGravity(Gravity.CENTER);
+            badge.setBackground(outlined(lower.contains("whatsapp") ? 0xff25a769 : 0xff0091e6, 12, Color.WHITE));
+            FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(dp(19), dp(19), Gravity.BOTTOM | Gravity.RIGHT);
+            wrapper.addView(badge, bp);
+        }
+        return wrapper;
     }
 
     private EditText field(String hint, String value, boolean secret) {
@@ -220,7 +324,10 @@ public final class MainActivity extends Activity {
         input.setSingleLine(true);
         input.setTextSize(16);
         input.setPadding(dp(12), 0, dp(12), 0);
-        input.setBackground(bg(PALE, 12));
+        input.setBackground(outlined(PALE, 12, Color.TRANSPARENT));
+        input.setTextColor(NAVY);
+        input.setHintTextColor(SECONDARY);
+        input.setIncludeFontPadding(false);
         input.setHint(hint);
         input.setText(value == null ? "" : value);
         if (secret) {
@@ -238,6 +345,8 @@ public final class MainActivity extends Activity {
         generation++;
         if (recorder != null) finishRecording(false);
         discardAttachments();
+        composerPanel = null;
+        chatTitle = null;
         attachmentTray = null;
         recordIndicator = null;
         attachButton = null;
@@ -245,7 +354,7 @@ public final class MainActivity extends Activity {
         replyMode = null;
         noteMode = null;
         root.removeAllViews();
-        root.setPadding(0, 0, 0, 0);
+        // Preserve safe area padding while changing screens.
         root.setBackgroundColor(Color.WHITE);
         messageScroll = null;
         messageContainer = null;
@@ -374,97 +483,184 @@ public final class MainActivity extends Activity {
         screen = Screen.LIST;
         currentConversation = -1;
         clear();
-        LinearLayout header = toolbar("Диалоги", "Волшебно тут · Рабочее пространство");
-        Button channels = button("☰  " + selectedInboxName + "  ▾", false);
-        channels.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
-        channels.setPadding(dp(12), 0, dp(12), 0);
-        header.addView(channels, new LinearLayout.LayoutParams(-1, dp(40)));
-        channels.setOnClickListener(v -> selectInbox());
-        LinearLayout actionRow = row();
-        syncLabel = text("● Автообновление каждые 15 сек.", 12, GREEN, false);
-        actionRow.addView(syncLabel, new LinearLayout.LayoutParams(0, dp(42), 1));
-        Button refresh = button("↻", false);
-        refresh.setContentDescription("Обновить список сейчас");
-        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(dp(48), dp(42));
-        rp.rightMargin = dp(7);
-        actionRow.addView(refresh, rp);
-        refresh.setOnClickListener(v -> loadConversations(true));
-        Button settings = button("⚙", false);
-        settings.setContentDescription("Подключение и уведомления");
-        actionRow.addView(settings, new LinearLayout.LayoutParams(dp(48), dp(42)));
-        settings.setOnClickListener(v -> showSettings());
-        header.addView(actionRow);
-        root.addView(header);
-        View headLine = new View(this);
-        headLine.setBackgroundColor(BORDER);
-        root.addView(headLine, new LinearLayout.LayoutParams(-1, dp(1)));
 
-        HorizontalScrollView horizontal = new HorizontalScrollView(this);
-        horizontal.setHorizontalScrollBarEnabled(false);
-        LinearLayout tabs = row();
-        tabs.setPadding(dp(12), dp(12), dp(12), dp(10));
-        addTab(tabs, "Открытые", "open");
-        addTab(tabs, "Ожидание", "pending");
-        addTab(tabs, "Отложенные", "snoozed");
-        addTab(tabs, "Закрытые", "resolved");
-        addTab(tabs, "Все", "all");
-        horizontal.addView(tabs);
-        root.addView(horizontal);
+        LinearLayout top = row();
+        top.setPadding(dp(9), dp(2), dp(9), dp(2));
+        Button search = glyph("search", "Поиск по сообщениям", false);
+        top.addView(search, new LinearLayout.LayoutParams(dp(46), dp(46)));
+        search.setOnClickListener(v -> showSearch());
+        TextView title = text("Диалоги", 17, NAVY, true);
+        title.setGravity(Gravity.CENTER);
+        top.addView(title, new LinearLayout.LayoutParams(0, dp(48), 1));
+        Button filter = glyph("filter", "Фильтры диалогов", false);
+        top.addView(filter, new LinearLayout.LayoutParams(dp(46), dp(46)));
+        filter.setOnClickListener(v -> showFilterMenu());
+        root.addView(top);
 
-        LinearLayout assignmentTabs = row();
-        assignmentTabs.setPadding(dp(12), dp(1), dp(12), dp(5));
-        addScopeTab(assignmentTabs, "Мои", "me");
-        addScopeTab(assignmentTabs, "Без оператора", "unassigned");
-        addScopeTab(assignmentTabs, "Все", "all");
-        root.addView(assignmentTabs);
-
-        LinearLayout search = row();
-        search.setPadding(dp(15), dp(3), dp(15), dp(12));
-        EditText input = field("Поиск по сообщениям", query, false);
-        input.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
-        search.addView(input, new LinearLayout.LayoutParams(0, dp(49), 1));
-        Button go = button("Найти", true);
-        LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(dp(82), dp(49));
-        gp.leftMargin = dp(9);
-        search.addView(go, gp);
-        go.setOnClickListener(v -> {
-            query = input.getText().toString().trim();
-            page = 1;
-            loadConversations();
-        });
-        input.setOnEditorActionListener((v, actionId, event) -> {
-            query = input.getText().toString().trim();
-            page = 1;
-            loadConversations();
-            return true;
-        });
-        root.addView(search);
-
-        View divider = new View(this);
-        divider.setBackgroundColor(BORDER);
-        root.addView(divider, new LinearLayout.LayoutParams(-1, dp(1)));
-
+        // As on Chatwoot mobile, filters are hidden in the toolbar by default.
+        if (!"all".equals(assigneeType) || !"open".equals(filterStatus) || selectedInbox > 0 || !query.isEmpty()) {
+            LinearLayout active = row();
+            active.setPadding(dp(16), 0, dp(16), dp(6));
+            String scope = "me".equals(assigneeType) ? "Мои" : "unassigned".equals(assigneeType) ? "Без оператора" : "Все";
+            TextView description = text(scope + " · " + ("all".equals(filterStatus) ? "Все статусы" : displayStatus(filterStatus))
+                + (selectedInbox > 0 ? " · " + selectedInboxName : "") +
+                (!query.isEmpty() ? " · «" + query + "»" : ""), 12, SECONDARY, false);
+            description.setSingleLine(true); description.setEllipsize(TextUtils.TruncateAt.END);
+            active.addView(description, new LinearLayout.LayoutParams(0, dp(32), 1));
+            Button reset = glyph("close", "Сбросить фильтры и поиск", false);
+            reset.setOnClickListener(v -> { filterStatus = "open"; assigneeType = "all"; selectedInbox = 0;
+                selectedInboxName = "Все каналы"; query = ""; page = 1; showList(); });
+            active.addView(reset, new LinearLayout.LayoutParams(dp(38), dp(32)));
+            root.addView(active);
+        }
+        separator(root);
         conversationScroll = new ScrollView(this);
         conversationScroll.setFillViewport(true);
+        conversationScroll.setVerticalScrollBarEnabled(false);
         conversationContainer = column();
         conversationContainer.setBackgroundColor(Color.WHITE);
         conversationScroll.addView(conversationContainer);
         root.addView(conversationScroll, new LinearLayout.LayoutParams(-1, 0, 1));
-
-        LinearLayout footer = row();
-        footer.setPadding(dp(15), dp(7), dp(15), dp(9));
-        footer.setBackgroundColor(PALE);
-        Button prev = button("←", false);
-        footer.addView(prev, new LinearLayout.LayoutParams(dp(54), dp(43)));
-        prev.setOnClickListener(v -> { if (page > 1) { page--; loadConversations(); } });
-        TextView pageLabel = text("Страница " + page, 14, NAVY, true);
-        pageLabel.setGravity(Gravity.CENTER);
-        footer.addView(pageLabel, new LinearLayout.LayoutParams(0, dp(43), 1));
-        Button next = button("Дальше →", false);
-        footer.addView(next, new LinearLayout.LayoutParams(dp(108), dp(43)));
-        next.setOnClickListener(v -> { page++; loadConversations(); });
-        root.addView(footer);
+        addBottomNav(root, "chat");
         loadConversations(true);
+    }
+
+    private void showSearch() {
+        EditText edit = field("Поиск по сообщениям", query, false);
+        edit.setSingleLine(true);
+        edit.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        new AlertDialog.Builder(this).setTitle("Поиск").setView(edit)
+            .setPositiveButton("Найти", (d,w) -> { query = edit.getText().toString().trim(); page = 1; showList(); })
+            .setNeutralButton("Очистить", (d,w) -> { query = ""; page = 1; showList(); })
+            .setNegativeButton("Отмена", null).show();
+    }
+
+    private void showFilterMenu() {
+        new AlertDialog.Builder(this).setTitle("Фильтры диалогов")
+            .setItems(new String[]{"Статус", "Ответственный", "Входящий канал", "Обновить список", "Сбросить фильтры"}, (d,w) -> {
+                if (w == 0) {
+                    String[] labels = {"Открытые", "Ожидание", "Отложенные", "Закрытые", "Все"};
+                    String[] values = {"open", "pending", "snoozed", "resolved", "all"};
+                    new AlertDialog.Builder(this).setTitle("Статус").setItems(labels, (dd,i) -> {
+                        filterStatus = values[i]; page = 1; showList();
+                    }).show();
+                } else if (w == 1) {
+                    String[] values = {"me", "unassigned", "all"};
+                    new AlertDialog.Builder(this).setTitle("Ответственный")
+                        .setItems(new String[]{"Мои", "Без оператора", "Все"}, (dd,i) -> {
+                            assigneeType = values[i]; page = 1; showList();
+                        }).show();
+                } else if (w == 2) selectInbox();
+                else if (w == 3) loadConversations(true);
+                else { filterStatus = "open"; assigneeType = "all"; selectedInbox = 0;
+                    selectedInboxName = "Все каналы"; query = ""; page = 1; showList(); }
+            }).setNegativeButton("Закрыть", null).show();
+    }
+
+    private void addBottomNav(LinearLayout parent, String selection) {
+        separator(parent);
+        LinearLayout menu = row();
+        menu.setPadding(dp(15), dp(3), dp(15), dp(5));
+        addNavItem(menu, "inbox", "Входящие", selection.equals("inbox"), this::showInbox);
+        addNavItem(menu, "chat", "Диалоги", selection.equals("chat"), this::showList);
+        addNavItem(menu, "settings", "Настройки", selection.equals("settings"), this::showSettings);
+        parent.addView(menu, new LinearLayout.LayoutParams(-1, dp(62)));
+    }
+
+    private void addNavItem(LinearLayout menu, String icon, String title, boolean active, Runnable action) {
+        LinearLayout cell = column();
+        cell.setGravity(Gravity.CENTER);
+        cell.setBackground(ripple(Color.WHITE, 12, Color.TRANSPARENT));
+        ImageView picture = new ImageView(this);
+        picture.setImageDrawable(new MobileIcon(active && icon.equals("chat") ? "chat-filled" : icon,
+            active ? NAVY : SECONDARY, dp(24)));
+        cell.addView(picture, new LinearLayout.LayoutParams(dp(24), dp(24)));
+        TextView label = text(title, 10, active ? NAVY : SECONDARY, active);
+        label.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(20));
+        lp.topMargin = dp(2);
+        cell.addView(label, lp);
+        menu.addView(cell, new LinearLayout.LayoutParams(0, -1, 1));
+        cell.setContentDescription(title);
+        cell.setOnClickListener(v -> action.run());
+    }
+
+    private void showInbox() {
+        if (api == null || sending) return;
+        screen = Screen.INBOX;
+        currentConversation = -1;
+        clear();
+        LinearLayout top = row();
+        top.setPadding(dp(9), dp(2), dp(9), dp(2));
+        View spacer = new View(this);
+        top.addView(spacer, new LinearLayout.LayoutParams(dp(46), dp(46)));
+        TextView title = text("Входящие", 17, NAVY, true);
+        title.setGravity(Gravity.CENTER);
+        top.addView(title, new LinearLayout.LayoutParams(0, dp(48), 1));
+        Button refresh = glyph("refresh", "Обновить уведомления", false);
+        refresh.setOnClickListener(v -> showInbox());
+        top.addView(refresh, new LinearLayout.LayoutParams(dp(46), dp(46)));
+        root.addView(top);
+        separator(root);
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout itemsView = column();
+        scroll.addView(itemsView);
+        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        addBottomNav(root, "inbox");
+        TextView loading = text("Загрузка…", 14, SECONDARY, false);
+        loading.setGravity(Gravity.CENTER);
+        itemsView.addView(loading, new LinearLayout.LayoutParams(-1, dp(100)));
+        int request = generation;
+        ApiClient client = api;
+        worker.execute(() -> {
+            try {
+                JSONObject result = client.notifications();
+                JSONObject data = result.optJSONObject("data");
+                JSONArray found = data == null ? null : data.optJSONArray("payload");
+                main.post(() -> {
+                    if (screen != Screen.INBOX || request != generation) return;
+                    itemsView.removeAllViews();
+                    if (found == null || found.length() == 0) {
+                        TextView empty = text("Нет уведомлений", 15, SECONDARY, false);
+                        empty.setGravity(Gravity.CENTER);
+                        itemsView.addView(empty, new LinearLayout.LayoutParams(-1, dp(140)));
+                        return;
+                    }
+                    for (int i=0; i<found.length(); i++) {
+                        JSONObject item = found.optJSONObject(i);
+                        if (item == null) continue;
+                        JSONObject actor = item.optJSONObject("primary_actor");
+                        int id = actor == null ? -1 : actor.optInt("id", actor.optInt("display_id", -1));
+                        JSONObject meta = actor == null ? null : actor.optJSONObject("meta");
+                        JSONObject sender = meta == null ? null : meta.optJSONObject("sender");
+                        String name = sender == null ? "Диалог #" + id : sender.optString("name", "Диалог #" + id);
+                        String status = actor == null ? "open" : actor.optString("status", "open");
+                        LinearLayout entry = row();
+                        entry.setPadding(dp(16),dp(13),dp(16),dp(13));
+                        entry.setBackground(ripple(item.isNull("read_at") ? 0xfff2f8ff : Color.WHITE, 8,Color.TRANSPARENT));
+                        entry.addView(avatar(name, sender == null ? "" : sender.optString("thumbnail",""), 42, ""),
+                            new LinearLayout.LayoutParams(dp(44),dp(44)));
+                        LinearLayout detail = column();
+                        detail.setPadding(dp(12),0,0,0);
+                        detail.addView(text(item.optString("push_message_title", "Уведомление"), 14, NAVY, true));
+                        TextView body = text(item.optString("push_message_body",""), 13,SECONDARY,false);
+                        body.setMaxLines(3); body.setEllipsize(TextUtils.TruncateAt.END);
+                        detail.addView(body);
+                        detail.addView(text(stamp(item.optLong("created_at",0)),11,SECONDARY,false));
+                        entry.addView(detail,new LinearLayout.LayoutParams(0,-2,1));
+                        itemsView.addView(entry);
+                        separator(itemsView);
+                        if (id > 0 && "Conversation".equals(item.optString("primary_actor_type","Conversation")))
+                            entry.setOnClickListener(v -> { currentAvatar = sender == null ? "" : sender.optString("thumbnail","");
+                                currentChannel = ""; showChat(id,name,status); });
+                    }
+                });
+            } catch(Exception ex) {
+                main.post(() -> { if (screen == Screen.INBOX && request == generation) {
+                    loading.setText("Не удалось загрузить уведомления. Нажми обновить.");
+                }});
+            }
+        });
     }
 
     private void addScopeTab(LinearLayout tabs, String label, String scope) {
@@ -559,6 +755,8 @@ public final class MainActivity extends Activity {
         JSONArray items = data != null ? data.optJSONArray("payload") : result.optJSONArray("payload");
         if (items == null) items = new JSONArray();
         if (items.length() == 0) {
+            if (page > 1) { Button previous = button("Вернуться на предыдущую страницу", false);
+                previous.setOnClickListener(v -> {page--;showList();}); conversationContainer.addView(previous, new LinearLayout.LayoutParams(-1,dp(44))); }
             TextView empty = text("Диалогов не найдено. Измени фильтр или поисковый запрос.", 15, SECONDARY, false);
             empty.setGravity(Gravity.CENTER);
             empty.setPadding(dp(25), dp(30), dp(25), dp(30));
@@ -584,77 +782,99 @@ public final class MainActivity extends Activity {
                 if (messages != null && messages.length() > 0)
                     recent = messages.optJSONObject(messages.length() - 1);
             }
-            String preview = recent == null ? "Нет текста последнего сообщения" : recent.optString("content", "");
-            if (preview.isBlank()) preview = "Вложение или системное сообщение";
+            String preview = recent == null || recent.isNull("content") ? "" : recent.optString("content", "");
+            if (preview.isBlank()) {
+                JSONArray media = recent == null ? null : recent.optJSONArray("attachments");
+                JSONObject first = media == null ? null : media.optJSONObject(0);
+                String kind = first == null ? "" : first.optString("file_type");
+                preview = "image".equals(kind) ? "Фото" : "video".equals(kind) ? "Видео" :
+                    "audio".equals(kind) ? "Аудиосообщение" : "file".equals(kind) ? "Файл" : "Нет текста сообщения";
+            }
             long ts = item.optLong("last_activity_at", 0L);
             String channel = meta == null ? "" : meta.optString("channel", "");
             JSONObject assignee = meta == null ? null : meta.optJSONObject("assignee");
             String agent = assignee == null ? "" : assignee.optString("name", "");
             JSONArray labels = item.optJSONArray("labels");
-            addConversationRow(id, name, convStatus, preview, unread, inbox, ts, channel, agent, labels);
+            String photo = sender == null ? "" : sender.optString("thumbnail", "");
+            String agentPhoto = assignee == null ? "" : assignee.optString("thumbnail", "");
+            String priority = item.optString("priority", "");
+            addConversationRow(id, name, convStatus, preview, unread, inbox, ts, channel, agent, labels, photo, agentPhoto, priority);
+        }
+        if (page > 1 || items.length() >= 20) {
+            LinearLayout paging = row();paging.setPadding(dp(14),dp(8),dp(14),dp(8));
+            if(page>1){Button prev=button("Назад",false);prev.setOnClickListener(v->{page--;showList();});
+                paging.addView(prev,new LinearLayout.LayoutParams(0,dp(36),1));}
+            TextView number=text("Стр. "+page,12,SECONDARY,false);number.setGravity(Gravity.CENTER);
+            paging.addView(number,new LinearLayout.LayoutParams(0,dp(36),1));
+            if(items.length()>=20){Button next=button("Далее",false);next.setOnClickListener(v->{page++;showList();});
+                paging.addView(next,new LinearLayout.LayoutParams(0,dp(36),1));}
+            conversationContainer.addView(paging);
         }
     }
 
-    private void addConversationRow(int id, String name, String status, String preview, int unread, int inbox, long timestamp, String channel, String agent, JSONArray labels) {
-        LinearLayout row = row();
-        row.setPadding(dp(15), dp(13), dp(15), dp(13));
-        row.setBackgroundColor(Color.WHITE);
-        TextView avatar = text(name.substring(0, Math.min(1, name.length())).toUpperCase(Locale.ROOT), 20, BLUE, true);
-        avatar.setGravity(Gravity.CENTER);
-        avatar.setBackground(bg(Color.rgb(231, 244, 255), 24));
-        row.addView(avatar, new LinearLayout.LayoutParams(dp(48), dp(48)));
+    private void addConversationRow(int id, String name, String status, String preview, int unread,
+                                    int inbox, long timestamp, String channel, String agent, JSONArray labels,
+                                    String photo, String agentPhoto, String priority) {
+        LinearLayout cell = row();
+        cell.setGravity(Gravity.TOP);
+        cell.setPadding(dp(14),dp(13),dp(15),dp(13));
+        cell.setBackground(ripple(Color.WHITE, 0, Color.TRANSPARENT));
+        cell.setMinimumHeight(dp(77));
+        cell.addView(avatar(name, photo, 48, channel), new LinearLayout.LayoutParams(dp(50),dp(50)));
         LinearLayout body = column();
-        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(0, -2, 1);
-        bp.leftMargin = dp(12);
-        row.addView(body, bp);
-        TextView contact = text(name, 16, NAVY, true);
-        contact.setSingleLine(true);
-        contact.setEllipsize(TextUtils.TruncateAt.END);
-        body.addView(contact);
-        String channelLabel = channel.contains("Telegram") ? "Telegram" :
-            channel.contains("Whatsapp") || channel.contains("WhatsApp") ? "WhatsApp" : "Канал #" + inbox;
-        String infoText = "#" + id + "  ·  " + channelLabel + "  ·  " + displayStatus(status);
-        TextView info = text(infoText, 12, SECONDARY, false);
-        body.addView(info);
-        TextView last = text(preview, 14, SECONDARY, false);
-        last.setMaxLines(2);
-        last.setEllipsize(TextUtils.TruncateAt.END);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.topMargin = dp(4);
-        body.addView(last, lp);
-        if (!agent.isBlank() || (labels != null && labels.length() > 0)) {
-            String label = labels != null && labels.length() > 0 ? labels.optString(0, "") : "";
-            String metaText = (agent.isBlank() ? "" : "👤 " + agent) +
-                (label.isBlank() ? "" : (agent.isBlank() ? "" : " · ") + "🏷 " + label);
-            if (!metaText.isBlank()) {
-                TextView metaTextView = text(metaText, 11, SECONDARY, false);
-                LinearLayout.LayoutParams mp = new LinearLayout.LayoutParams(-1, -2);
-                mp.topMargin = dp(5);
-                body.addView(metaTextView, mp);
+        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(0,-2,1);
+        bp.leftMargin = dp(10);
+        cell.addView(body,bp);
+        LinearLayout nameRow = row();
+        TextView contact = text(name,15,NAVY,true);
+        contact.setSingleLine(true); contact.setEllipsize(TextUtils.TruncateAt.END);
+        nameRow.addView(contact,new LinearLayout.LayoutParams(0,dp(20),1));
+        if ("urgent".equals(priority) || "high".equals(priority)) {
+            TextView p = text("!",12,0xffe58a00,true); p.setGravity(Gravity.CENTER);
+            nameRow.addView(p,new LinearLayout.LayoutParams(dp(15),dp(18)));
+        }
+        if (timestamp > 0) {
+            TextView at = text(stamp(timestamp),12,SECONDARY,false);
+            at.setGravity(Gravity.RIGHT);
+            nameRow.addView(at,new LinearLayout.LayoutParams(-2,dp(20)));
+        }
+        body.addView(nameRow);
+        LinearLayout msgRow = row();
+        TextView last = text(preview,14, 0xff646464, false);
+        last.setMaxLines(1); last.setEllipsize(TextUtils.TruncateAt.END);
+        msgRow.addView(last,new LinearLayout.LayoutParams(0,dp(23),1));
+        if (unread > 0) {
+            TextView count = text(unread > 99 ? "99+" : Integer.toString(unread),11,Color.WHITE,true);
+            count.setGravity(Gravity.CENTER);
+            count.setBackground(bg(BLUE,12));
+            LinearLayout.LayoutParams c = new LinearLayout.LayoutParams(dp(unread > 99 ? 30 : 23),dp(22));
+            c.leftMargin=dp(8);msgRow.addView(count,c);
+        }
+        body.addView(msgRow);
+        LinearLayout meta = row();
+        TextView statusText = text("#"+id+"  ·  "+displayStatus(status),11,SECONDARY,false);
+        statusText.setMaxLines(1); statusText.setEllipsize(TextUtils.TruncateAt.END);
+        meta.addView(statusText,new LinearLayout.LayoutParams(0,dp(19),1));
+        if(labels!=null && labels.length()>0){
+            String value=labels.optString(0,"");
+            if(!value.isBlank()){
+                TextView tag=text(value,10,0xff696969,false);
+                tag.setSingleLine(true);tag.setEllipsize(TextUtils.TruncateAt.END);
+                tag.setMaxWidth(dp(92));tag.setPadding(dp(6),0,dp(6),0);
+                tag.setBackground(bg(PALE,6));
+                meta.addView(tag,new LinearLayout.LayoutParams(-2,dp(18)));
             }
         }
-        LinearLayout right = column();
-        right.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
-        row.addView(right, new LinearLayout.LayoutParams(-2, -2));
-        if (timestamp > 0) {
-            TextView at = text(stamp(timestamp), 11, SECONDARY, false);
-            at.setGravity(Gravity.RIGHT);
-            right.addView(at);
+        if(!agent.isBlank()) {
+            LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(dp(20),dp(20));ap.leftMargin=dp(6);
+            meta.addView(avatar(agent,agentPhoto,20,""),ap);
         }
-        if (unread > 0) {
-            TextView count = text(Integer.toString(unread), 12, Color.WHITE, true);
-            count.setGravity(Gravity.CENTER);
-            count.setBackground(bg(GREEN, 18));
-            LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(dp(31), dp(31));
-            cp.leftMargin = dp(8);
-            cp.topMargin = dp(8);
-            right.addView(count, cp);
-        }
-        conversationContainer.addView(row);
-        View line = new View(this);
-        line.setBackgroundColor(BORDER);
-        conversationContainer.addView(line, new LinearLayout.LayoutParams(-1, dp(1)));
-        row.setOnClickListener(v -> showChat(id, name, status));
+        body.addView(meta);
+        conversationContainer.addView(cell);
+        View hairline=new View(this);hairline.setBackgroundColor(BORDER);
+        LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(1));hp.leftMargin=dp(74);
+        conversationContainer.addView(hairline,hp);
+        cell.setOnClickListener(v -> { currentAvatar = photo; currentChannel = channel; showChat(id,name,status); });
     }
 
     private String displayStatus(String s) {
@@ -681,7 +901,7 @@ public final class MainActivity extends Activity {
             .setTitle("Подключение и уведомления")
             .setMessage("Сервер: " + credentials.server() + "\\nАккаунт: #" + account +
                 "\\n\\n" + PushBridge.status(this) +
-                "\\n\\nВерсия 0.6.0 (сборка 5). Автообновление списка и переписки: каждые 15 секунд.\nДля Push сервер Chatwoot должен иметь FIREBASE_PROJECT_ID и FIREBASE_CREDENTIALS.")
+                "\\n\\nВерсия 0.7.0 (сборка 6). Автообновление списка и переписки: каждые 15 секунд.\nДля Push сервер Chatwoot должен иметь FIREBASE_PROJECT_ID и FIREBASE_CREDENTIALS.")
             .setPositiveButton("Закрыть", (d, w) -> d.dismiss())
             .setNeutralButton("Проверить Push", (d, w) -> {
                 requestPushPermission();
@@ -716,6 +936,7 @@ public final class MainActivity extends Activity {
         if (intent == null || api == null) return;
         int id = PushBridge.conversationFromPayload(intent.getStringExtra("payload"), account);
         if (id > 0) {
+            currentAvatar = ""; currentChannel = "";
             intent.removeExtra("payload"); // avoid reopening after rotation
             showChat(id, "Диалог #" + id, "open");
         }
@@ -728,96 +949,93 @@ public final class MainActivity extends Activity {
         currentName = name;
         currentStatus = status;
         clear();
-        LinearLayout header = toolbar("‹  " + name, "Диалог #" + id + " · " + displayStatus(status));
-        header.setOnClickListener(v -> showList());
-        LinearLayout actions = row();
-        Button back = button("← Диалоги", false);
-        actions.addView(back, new LinearLayout.LayoutParams(0, dp(44), 1));
-        back.setOnClickListener(v -> showList());
-        statusButton = button("Статус: " + displayStatus(status) + " ▾", false);
-        statusButton.setTextSize(12);
-        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(dp(165), dp(44));
-        sp.leftMargin = dp(8);
-        actions.addView(statusButton, sp);
-        statusButton.setOnClickListener(v -> chooseStatus());
-        Button more = button("⋮", false);
-        more.setContentDescription("Действия Chatwoot: оператор, приоритет, готовые ответы");
-        LinearLayout.LayoutParams moreParams = new LinearLayout.LayoutParams(dp(44), dp(44));
-        moreParams.leftMargin = dp(7);
-        actions.addView(more, moreParams);
-        more.setOnClickListener(v ->
-            ChatActions.show(this, api, currentConversation, currentName, draft, () -> loadMessages(true)));
-        header.addView(actions);
+        LinearLayout header = row();
+        header.setPadding(dp(4),dp(3),dp(8),dp(5));
+        Button back = glyph("back","Назад к диалогам",false);
+        back.setOnClickListener(v -> onBackPressed());
+        header.addView(back,new LinearLayout.LayoutParams(dp(42),dp(48)));
+        header.addView(avatar(name,currentAvatar,38,""),new LinearLayout.LayoutParams(dp(38),dp(38)));
+        chatTitle=text(name,16,NAVY,true);
+        chatTitle.setSingleLine(true);chatTitle.setEllipsize(TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(0,dp(48),1);tp.leftMargin=dp(9);
+        header.addView(chatTitle,tp);
+        Button more=glyph("more","Действия с диалогом",false);
+        more.setOnClickListener(v -> ChatActions.show(this,api,currentConversation,currentName,draft,()->loadMessages(true)));
+        header.addView(more,new LinearLayout.LayoutParams(dp(44),dp(48)));
         root.addView(header);
+        LinearLayout sub=row();sub.setPadding(dp(15),0,dp(15),dp(9));
+        String ch=currentChannel.toLowerCase(Locale.ROOT);
+        String channelName=ch.contains("telegram")?"Telegram":ch.contains("whatsapp")?"WhatsApp":
+            ch.contains("email")?"Email":"Диалог #"+id;
+        TextView channelChip=text(channelName,12,SECONDARY,false);
+        channelChip.setPadding(dp(9),0,dp(9),0);
+        channelChip.setBackground(outlined(Color.WHITE,8,BORDER));
+        sub.addView(channelChip,new LinearLayout.LayoutParams(-2,dp(31)));
+        View stretch=new View(this);sub.addView(stretch,new LinearLayout.LayoutParams(0,1,1));
+        statusButton=button(status.equals("resolved")?"Открыть": "Закрыть",false);
+        statusButton.setTextSize(12);
+        statusButton.setBackground(ripple(0xfff0f3f3,8,Color.TRANSPARENT));
+        statusButton.setOnClickListener(v -> chooseStatus());
+        statusButton.setText(status.equals("open")?"Закрыть ✓":displayStatus(status)+" ▾");
+        sub.addView(statusButton,new LinearLayout.LayoutParams(-2,dp(32)));
+        root.addView(sub);
+        separator(root);
 
         messageScroll = new ScrollView(this);
         messageScroll.setFillViewport(true);
-        messageScroll.setBackgroundColor(Color.rgb(246, 248, 251));
+        messageScroll.setBackgroundColor(Color.WHITE);
+        messageScroll.setVerticalScrollBarEnabled(false);
         messageContainer = column();
-        messageContainer.setPadding(dp(12), dp(14), dp(12), dp(16));
+        messageContainer.setPadding(dp(12), dp(10), dp(12), dp(12));
         messageScroll.addView(messageContainer);
         root.addView(messageScroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        // Same mental model as desktop Chatwoot: Reply/private-note tabs, rich
-        // composer, attachment tray and a separate explicit Send action.
-        LinearLayout composer = column();
-        composer.setPadding(dp(12), dp(7), dp(12), dp(9));
+        LinearLayout composer=column();
+        composer.setPadding(dp(10),dp(5),dp(10),dp(6));
         composer.setBackgroundColor(Color.WHITE);
-        LinearLayout mode = row();
-        privateNote = new CheckBox(this);
-        replyMode = button("Ответ", true);
-        noteMode = button("Заметка 🔒", false);
-        mode.addView(replyMode, new LinearLayout.LayoutParams(0, dp(36), 1));
-        LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(0, dp(36), 1);
-        np.leftMargin = dp(6);
-        mode.addView(noteMode, np);
+        privateNote=new CheckBox(this);
+        LinearLayout mode=row();
+        replyMode=button("Ответ",false); noteMode=button("Личная заметка",false);
+        replyMode.setTextSize(12); noteMode.setTextSize(12);
+        replyMode.setPadding(dp(9),0,dp(9),0);noteMode.setPadding(dp(9),0,dp(9),0);
+        replyMode.setBackground(ripple(PALE,7,Color.TRANSPARENT));
+        noteMode.setBackground(ripple(Color.TRANSPARENT,7,Color.TRANSPARENT));
+        noteMode.setTextColor(SECONDARY);
+        mode.addView(replyMode,new LinearLayout.LayoutParams(-2,dp(30)));
+        mode.addView(noteMode,new LinearLayout.LayoutParams(-2,dp(30)));
         replyMode.setOnClickListener(v -> setComposerMode(false));
         noteMode.setOnClickListener(v -> setComposerMode(true));
         composer.addView(mode);
-        attachmentTray = column();
+        attachmentTray=column();
         composer.addView(attachmentTray);
-        recordIndicator = text("", 13, Color.rgb(190, 40, 55), true);
-        recordIndicator.setVisibility(View.GONE);
-        composer.addView(recordIndicator);
-        draft = field("Написать ответ…", "", false);
-        draft.setSingleLine(false);
-        draft.setMinLines(2);
-        draft.setMaxLines(5);
-        draft.setGravity(Gravity.TOP | Gravity.LEFT);
-        draft.setPadding(dp(12), dp(10), dp(12), dp(8));
-        draft.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        LinearLayout.LayoutParams dpLayout = new LinearLayout.LayoutParams(-1, -2);
-        dpLayout.topMargin = dp(6);
-        composer.addView(draft, dpLayout);
-        LinearLayout write = row();
-        attachButton = button("＋", false);
-        attachButton.setContentDescription("Прикрепить фото, видео или файлы");
-        write.addView(attachButton, new LinearLayout.LayoutParams(dp(42), dp(44)));
+        recordIndicator=text("",13,0xffbe2837,true);
+        recordIndicator.setVisibility(View.GONE);composer.addView(recordIndicator);
+
+        composerPanel=row();
+        composerPanel.setGravity(Gravity.BOTTOM);
+        composerPanel.setPadding(dp(4),dp(4),dp(4),dp(4));
+        composerPanel.setBackground(outlined(PALE,22,BORDER));
+        attachButton=glyph("plus","Прикрепить фото, видео или файлы",false);
+        composerPanel.addView(attachButton,new LinearLayout.LayoutParams(dp(40),dp(40)));
         attachButton.setOnClickListener(v -> chooseAttachmentType());
-        micButton = button("🎙", false);
-        micButton.setContentDescription("Записать голосовое сообщение");
-        LinearLayout.LayoutParams micParams = new LinearLayout.LayoutParams(dp(48), dp(44));
-        micParams.leftMargin = dp(5);
-        write.addView(micButton, micParams);
+
+        draft=field("Написать сообщение…","",false);
+        draft.setTextSize(15);draft.setBackgroundColor(Color.TRANSPARENT);
+        draft.setSingleLine(false);draft.setMinLines(1);draft.setMaxLines(5);
+        draft.setGravity(Gravity.CENTER_VERTICAL|Gravity.LEFT);draft.setPadding(dp(4),dp(8),dp(2),dp(8));
+        draft.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        composerPanel.addView(draft,new LinearLayout.LayoutParams(0,-2,1));
+        Button snippets=glyph("bolt","Готовые ответы",false);
+        snippets.setOnClickListener(v -> ChatActions.show(this,api,currentConversation,currentName,draft,()->loadMessages(true)));
+        composerPanel.addView(snippets,new LinearLayout.LayoutParams(dp(36),dp(40)));
+        micButton=glyph("mic","Записать голосовое сообщение",false);
         micButton.setOnClickListener(v -> toggleRecording());
-        Button snippets = button("⚡", false);
-        snippets.setContentDescription("Готовые ответы и действия");
-        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(dp(43), dp(44));
-        cp.leftMargin = dp(5);
-        write.addView(snippets, cp);
-        snippets.setOnClickListener(v ->
-            ChatActions.show(this, api, currentConversation, currentName, draft, () -> loadMessages(true)));
-        View space = new View(this);
-        write.addView(space, new LinearLayout.LayoutParams(0, 1, 1));
-        sendButton = button("Отправить ➤", true);
-        sendButton.setContentDescription("Отправить сообщение или вложения");
-        LinearLayout.LayoutParams sendParams = new LinearLayout.LayoutParams(dp(126), dp(44));
-        sendParams.leftMargin = dp(6);
-        write.addView(sendButton, sendParams);
+        composerPanel.addView(micButton,new LinearLayout.LayoutParams(dp(36),dp(40)));
+        sendButton=glyph("send","Отправить сообщение",true);
         sendButton.setOnClickListener(v -> send());
-        LinearLayout.LayoutParams wr = new LinearLayout.LayoutParams(-1, -2);
-        wr.topMargin = dp(6);
-        composer.addView(write, wr);
+        composerPanel.addView(sendButton,new LinearLayout.LayoutParams(dp(40),dp(40)));
+        LinearLayout.LayoutParams panel=new LinearLayout.LayoutParams(-1,-2);panel.topMargin=dp(5);
+        composer.addView(composerPanel,panel);
         root.addView(composer);
         loadMessages(true);
     }
@@ -858,13 +1076,13 @@ public final class MainActivity extends Activity {
     private void setComposerMode(boolean note) {
         if (sending || recorder != null || privateNote == null) return;
         privateNote.setChecked(note);
-        replyMode.setBackground(bg(note ? PALE : BLUE, 8));
-        replyMode.setTextColor(note ? BLUE : Color.WHITE);
-        noteMode.setBackground(bg(note ? NOTE : PALE, 8));
-        noteMode.setTextColor(note ? Color.rgb(133, 87, 17) : BLUE);
-        draft.setBackground(bg(note ? NOTE : PALE, 10));
-        draft.setHint(note ? "Заметка — видна только команде" : "Написать ответ…");
-        sendButton.setText(note ? "Заметка ➤" : "Отправить ➤");
+        replyMode.setBackground(ripple(note?Color.TRANSPARENT:PALE,7,Color.TRANSPARENT));
+        replyMode.setTextColor(note?SECONDARY:NAVY);
+        noteMode.setBackground(ripple(note?0xffffefcb:Color.TRANSPARENT,7,Color.TRANSPARENT));
+        noteMode.setTextColor(note?0xff93601f:SECONDARY);
+        if(composerPanel!=null)composerPanel.setBackground(outlined(note?0xfffff8e8:PALE,22,note?0xfff8dfaa:BORDER));
+        draft.setHint(note?"Видно только команде":"Написать сообщение…");
+        sendButton.setBackground(ripple(note?0xffd28a23:BLUE,24,Color.TRANSPARENT));
     }
 
     private void chooseAttachmentType() {
@@ -996,7 +1214,7 @@ public final class MainActivity extends Activity {
             recorder.prepare();
             recorder.start();
             recordStarted = SystemClock.elapsedRealtime();
-            micButton.setText("■");
+            setGlyph(micButton, "stop", 0xffbe2837);
             micButton.setContentDescription("Остановить запись");
             attachButton.setEnabled(false);
             sendButton.setEnabled(false);
@@ -1028,7 +1246,7 @@ public final class MainActivity extends Activity {
             if (keep) showError("Слишком короткая запись");
         }
         if (micButton != null) {
-            micButton.setText("🎙");
+            setGlyph(micButton, "mic", NAVY);
             micButton.setContentDescription("Записать голосовое сообщение");
         }
         if (recordIndicator != null) recordIndicator.setVisibility(View.GONE);
@@ -1040,8 +1258,8 @@ public final class MainActivity extends Activity {
         sending = active;
         if (sendButton != null) {
             sendButton.setEnabled(!active);
-            sendButton.setText(active ? "Отправка…" :
-                privateNote != null && privateNote.isChecked() ? "Заметка ➤" : "Отправить ➤");
+            sendButton.setAlpha(active ? 0.45f : 1f);
+            sendButton.setContentDescription(active ? "Отправка…" : "Отправить сообщение");
         }
         if (draft != null) draft.setEnabled(!active);
         if (attachButton != null) attachButton.setEnabled(!active);
@@ -1122,13 +1340,14 @@ public final class MainActivity extends Activity {
             }
             JSONObject sender = m.optJSONObject("sender");
             String author = sender == null ? "" : sender.optString("name", "");
-            addMessageBubble(content, type, note, created, attachments, author, m.optString("status", ""));
+            String authorPhoto = sender == null ? "" : sender.optString("thumbnail", "");
+            addMessageBubble(content, type, note, created, attachments, author, m.optString("status", ""), authorPhoto);
         }
         if (messageScroll != null && (firstRender || nearBottom))
             messageScroll.post(() -> messageScroll.fullScroll(View.FOCUS_DOWN));
     }
 
-    private void addMessageBubble(String content, int type, boolean note, long created, JSONArray attachments, String author, String status) {
+    private void addMessageBubble(String content, int type, boolean note, long created, JSONArray attachments, String author, String status, String authorPhoto) {
         boolean outgoing = type == 1;
         if (type == 2 && !note) {
             TextView event = text(content, 12, SECONDARY, false);
@@ -1138,20 +1357,25 @@ public final class MainActivity extends Activity {
             return;
         }
         LinearLayout line = row();
-        line.setGravity(outgoing ? Gravity.RIGHT : Gravity.LEFT);
+        line.setGravity(Gravity.LEFT | Gravity.BOTTOM);
         LinearLayout.LayoutParams lineParams = new LinearLayout.LayoutParams(-1, -2);
-        lineParams.bottomMargin = dp(10);
+        lineParams.bottomMargin = dp(8);
         messageContainer.addView(line, lineParams);
         LinearLayout bubble = column();
-        bubble.setPadding(dp(13), dp(10), dp(13), dp(10));
-        bubble.setBackground(bg(note ? NOTE : outgoing ? Color.rgb(222, 240, 255) : Color.WHITE, 15));
-        line.addView(bubble, new LinearLayout.LayoutParams(-2, -2));
+        bubble.setPadding(dp(12), dp(9), dp(12), dp(8));
+        bubble.setBackground(bg(note ? 0xffffefcf : outgoing ? BLUE : 0xffefefef, 16));
+        String shownAuthor = author.isBlank() ? (outgoing ? "Оператор" : currentName) : author;
+        line.addView(avatar(shownAuthor, authorPhoto, 25, ""),new LinearLayout.LayoutParams(dp(25),dp(25)));
+        LinearLayout.LayoutParams bubbleParams = new LinearLayout.LayoutParams(-2,-2);
+        bubbleParams.leftMargin=dp(7);
+        line.addView(bubble,bubbleParams);
 
         if (note) bubble.addView(text("🔒 Внутренняя заметка", 11, Color.rgb(154, 107, 20), true));
-        else if (!author.isBlank()) bubble.addView(text(author, 11, SECONDARY, true));
+        else if (!author.isBlank()) bubble.addView(text(author, 11, outgoing ? 0xffd9efff : SECONDARY, true));
         if (!content.isBlank() && !"null".equals(content)) {
-            TextView body = text(content, 15, NAVY, false);
-            body.setMaxWidth(dp(285));
+            TextView body = text(content, 15, outgoing && !note ? Color.WHITE : NAVY, false);
+            body.setLineSpacing(dp(2),1f);
+            body.setMaxWidth(Math.min(dp(290),getResources().getDisplayMetrics().widthPixels-dp(90)));
             body.setTextIsSelectable(true);
             bubble.addView(body);
         }
@@ -1196,7 +1420,7 @@ public final class MainActivity extends Activity {
         if (created > 0) {
             String indicator = !outgoing || note ? "" : "failed".equals(status) ? "  ⚠ Не доставлено" :
                 "read".equals(status) ? "  ✓✓" : "delivered".equals(status) ? "  ✓✓" : "sent".equals(status) ? "  ✓" : "";
-            TextView at = text(stamp(created) + indicator, 11, "failed".equals(status) ? Color.rgb(190, 40, 55) : SECONDARY, false);
+            TextView at = text(stamp(created) + indicator, 10, "failed".equals(status) ? 0xffb4232c : outgoing && !note ? 0xffe3f2ff : SECONDARY, false);
             at.setGravity(Gravity.RIGHT);
             LinearLayout.LayoutParams timeParams = new LinearLayout.LayoutParams(-1, -2);
             timeParams.topMargin = dp(4);
@@ -1277,7 +1501,7 @@ public final class MainActivity extends Activity {
                     if (screen != Screen.CHAT || request != generation || currentConversation != id) return;
                     currentStatus = next;
                     statusButton.setEnabled(true);
-                    statusButton.setText("Статус: " + displayStatus(next) + " ▾");
+                    statusButton.setText(next.equals("open") ? "Закрыть ✓" : displayStatus(next) + " ▾");
                     showError("Статус изменён: " + displayStatus(next));
                 });
             } catch (Exception ex) {
@@ -1299,7 +1523,7 @@ public final class MainActivity extends Activity {
                 .setPositiveButton("Удалить", (d, w) -> showList()).show();
             return;
         }
-        if (screen == Screen.CHAT) showList();
+        if (screen == Screen.CHAT || screen == Screen.INBOX) showList();
         else super.onBackPressed();
     }
 }
