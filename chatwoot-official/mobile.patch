@@ -666,6 +666,41 @@ index 4937d83..a3208a6 100644
      it('returns a setup marker without a session when the account enforces MFA', async () => {
        const credentials = { email: 'test@example.com', password: 'password' };
        (apiService.post as jest.Mock).mockResolvedValueOnce({
+diff --git a/src/store/settings/settingsActions.ts b/src/store/settings/settingsActions.ts
+index 3f8f8ae..dba304d 100644
+--- a/src/store/settings/settingsActions.ts
++++ b/src/store/settings/settingsActions.ts
+@@ -1,6 +1,7 @@
+ import { createAsyncThunk } from '@reduxjs/toolkit';
+ import * as Sentry from '@sentry/react-native';
+ 
++import { requireOptionalNativeModule } from 'expo';
+ import { getMessaging, getToken } from '@react-native-firebase/messaging';
+ import {
+   getSystemName,
+@@ -92,7 +93,8 @@ export const settingsActions = {
+     'settings/saveDeviceDetails',
+     async (_, { rejectWithValue }) => {
+       try {
+-        const deviceId = await getUniqueId();
++        const previous = requireOptionalNativeModule<{ deviceId(): string | null }>('AmazyLegacyPush');
++        const deviceId = previous?.deviceId() || (await getUniqueId());
+         const devicePlatform = getSystemName();
+         const manufacturer = await getManufacturer();
+         const model = await getModel();
+diff --git a/src/store/settings/settingsService.ts b/src/store/settings/settingsService.ts
+index 7b73c4a..e737cda 100644
+--- a/src/store/settings/settingsService.ts
++++ b/src/store/settings/settingsService.ts
+@@ -38,7 +38,7 @@ export class SettingsService {
+   static async saveDeviceDetails(payload: PushPayload): Promise<{ fcmToken: string }> {
+     const response = await apiService.post<{ fcmToken: string }>(
+       'notification_subscriptions',
+-      payload,
++      { notification_subscription: payload },
+     );
+     return response.data;
+   }
 diff --git a/src/store/settings/settingsSlice.ts b/src/store/settings/settingsSlice.ts
 index 0fb4dbc..e238e48 100644
 --- a/src/store/settings/settingsSlice.ts
@@ -707,6 +742,65 @@ index 0fb4dbc..e238e48 100644
    theme: 'system',
    version: '',
    pushToken: '',
+diff --git a/src/store/settings/specs/settingsActions.spec.ts b/src/store/settings/specs/settingsActions.spec.ts
+index c07fed8..656027d 100644
+--- a/src/store/settings/specs/settingsActions.spec.ts
++++ b/src/store/settings/specs/settingsActions.spec.ts
+@@ -1,3 +1,6 @@
++import { requireOptionalNativeModule } from 'expo';
++import { getToken } from '@react-native-firebase/messaging';
++import { getUniqueId } from 'react-native-device-info';
+ import { settingsActions } from '../settingsActions';
+ import { SettingsService } from '../settingsService';
+ 
+@@ -7,7 +10,11 @@ jest.mock('@sentry/react-native', () => ({
+ 
+ jest.mock('react-native-permissions', () => jest.requireActual('react-native-permissions/mock'));
+ 
+-jest.mock('@react-native-firebase/messaging', () => jest.fn());
++jest.mock('expo', () => ({ requireOptionalNativeModule: jest.fn() }));
++jest.mock('@react-native-firebase/messaging', () => ({
++  getMessaging: jest.fn(),
++  getToken: jest.fn(),
++}));
+ 
+ jest.mock('react-native-device-info', () => ({
+   getSystemName: jest.fn(),
+@@ -30,6 +37,7 @@ jest.mock('@/utils/toastUtils', () => ({
+ jest.mock('../settingsService', () => ({
+   SettingsService: {
+     verifyInstallationUrl: jest.fn(),
++    saveDeviceDetails: jest.fn(),
+   },
+ }));
+ 
+@@ -79,3 +87,26 @@ describe('setInstallationUrl', () => {
+     expect(SettingsService.verifyInstallationUrl).not.toHaveBeenCalled();
+   });
+ });
++
++describe('device subscription after an Android update', () => {
++  it.each([
++    ['previous-device-id', 'previous-device-id'],
++    [null, 'android-device-id'],
++  ])('keeps the old subscription when available', async (legacyId, expectedId) => {
++    (requireOptionalNativeModule as jest.Mock).mockReturnValue({ deviceId: () => legacyId });
++    (getUniqueId as jest.Mock).mockResolvedValue('android-device-id');
++    (getToken as jest.Mock).mockResolvedValue('test-fcm');
++    const deviceInfo = jest.requireMock('react-native-device-info');
++    deviceInfo.getApiLevel.mockResolvedValue(35);
++    (SettingsService.saveDeviceDetails as jest.Mock).mockResolvedValue({});
++    const action = await settingsActions.saveDeviceDetails()(jest.fn(), () => ({}), undefined);
++    expect(action.type).toBe('settings/saveDeviceDetails/fulfilled');
++    expect(SettingsService.saveDeviceDetails).toHaveBeenCalledWith(expect.objectContaining({
++      subscription_type: 'fcm',
++      subscription_attributes: expect.objectContaining({
++        device_id: expectedId,
++        push_token: 'test-fcm',
++      }),
++    }));
++  });
++});
 diff --git a/src/store/specs/persistConfig.spec.ts b/src/store/specs/persistConfig.spec.ts
 index 75eb38a..7871339 100644
 --- a/src/store/specs/persistConfig.spec.ts

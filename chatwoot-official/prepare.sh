@@ -10,6 +10,8 @@ rev=$(git -C "$repo" rev-parse :chatwoot-official/upstream)
 mkdir -p "$app"
 git -C "$source_dir" archive "$rev" | tar -x -C "$app"
 git -C "$repo" apply --directory=chatwoot-official/app "$here/mobile.patch"
+mkdir -p "$app/modules/amazy-legacy-push"
+cp -R "$here/legacy-push/." "$app/modules/amazy-legacy-push/"
 cp "$here/deployment.json" "$app/amazy.json"
 cp "$repo/public/icon-512x512.png" "$app/assets/icon.png"
 cp "$repo/public/icon-maskable-512x512.png" "$app/assets/adaptive-icon.png"

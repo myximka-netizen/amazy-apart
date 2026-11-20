@@ -2,7 +2,18 @@ name: Official Chatwoot Android
 on:
   push:
     branches: [chatwoot-official-android]
-    paths: ['chatwoot-official/**', '.gitmodules', '.github/workflows/chatwoot-official-android.yml']
+    paths:
+      - 'chatwoot-official/**'
+      - '!chatwoot-official/**/*.md'
+      - '!chatwoot-official/server/**'
+      - 'chatwoot-official/release-notes.md'
+      - 'public/logo.png'
+      - 'public/icon-512x512.png'
+      - 'public/icon-maskable-512x512.png'
+      - 'chatwoot-native/app/google-services.json'
+      - 'chatwoot-native/app/src/main/res/drawable/ic_stat_chat.xml'
+      - '.gitmodules'
+      - '.github/workflows/chatwoot-official-android.yml'
   workflow_dispatch:
 
 permissions:
