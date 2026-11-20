@@ -4,6 +4,11 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.ClipData;
+import android.media.MediaRecorder;
+import android.os.SystemClock;
+import java.io.File;
+import java.util.ArrayList;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -42,6 +47,8 @@ import java.util.concurrent.Executors;
  */
 public final class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION = 33005;
+    private static final int PICK_ATTACHMENTS = 33006;
+    private static final int MICROPHONE_PERMISSION = 33007;
     // Chatwoot-inspired visual system: quiet white surfaces, slate text, bright blue actions.
     private static final int NAVY = Color.rgb(31, 41, 55);
     private static final int BLUE = Color.rgb(31, 147, 255);
@@ -60,6 +67,7 @@ public final class MainActivity extends Activity {
     private final Runnable foregroundRefresh = new Runnable() {
         @Override public void run() {
             if (!foreground) return;
+            if (sending) { main.postDelayed(this, AUTO_REFRESH_MS); return; }
             if (screen == Screen.LIST) loadConversations(false);
             else if (screen == Screen.CHAT && currentConversation > 0) loadMessages(false);
             main.postDelayed(this, AUTO_REFRESH_MS);
@@ -75,6 +83,28 @@ public final class MainActivity extends Activity {
     private int page = 1;
     private String filterStatus = "open";
     private String assigneeType = "all";
+    private int selectedInbox = 0;
+    private String selectedInboxName = "Все каналы";
+    private final ArrayList<AttachmentDraft> pendingAttachments = new ArrayList<>();
+    private LinearLayout attachmentTray;
+    private Button attachButton, micButton, replyMode, noteMode;
+    private TextView recordIndicator;
+    private MediaRecorder recorder;
+    private File recordingFile;
+    private long recordStarted;
+    private boolean sending = false;
+    private int pickerConversation = -1;
+    private int permissionConversation = -1;
+    private final Runnable recordingClock = new Runnable() {
+        @Override public void run() {
+            if (recorder == null) return;
+            long seconds = (SystemClock.elapsedRealtime() - recordStarted) / 1000;
+            if (recordIndicator != null) recordIndicator.setText(String.format(Locale.ROOT,
+                "● Запись  %02d:%02d", seconds / 60, seconds % 60));
+            if (seconds >= 600) { finishRecording(true); return; }
+            main.postDelayed(this, 250);
+        }
+    };
     private String query = "";
     private boolean listLoading = false;
     private String lastListFingerprint = "";
@@ -126,12 +156,15 @@ public final class MainActivity extends Activity {
 
     @Override protected void onPause() {
         foreground = false;
+        if (recorder != null) finishRecording(true);
         main.removeCallbacks(foregroundRefresh);
         super.onPause();
     }
 
     @Override protected void onDestroy() {
         main.removeCallbacks(foregroundRefresh);
+        if (recorder != null) finishRecording(false);
+        if (!sending) discardAttachments();
         worker.shutdownNow();
         super.onDestroy();
     }
@@ -202,6 +235,14 @@ public final class MainActivity extends Activity {
 
     private void clear() {
         generation++;
+        if (recorder != null) finishRecording(false);
+        discardAttachments();
+        attachmentTray = null;
+        recordIndicator = null;
+        attachButton = null;
+        micButton = null;
+        replyMode = null;
+        noteMode = null;
         root.removeAllViews();
         root.setPadding(0, 0, 0, 0);
         root.setBackgroundColor(Color.WHITE);
@@ -327,11 +368,17 @@ public final class MainActivity extends Activity {
     }
 
     private void showList() {
+        if (sending) { showError("Дождись завершения отправки"); return; }
         if (api == null) { showLogin("Сначала подключись к серверу"); return; }
         screen = Screen.LIST;
         currentConversation = -1;
         clear();
-        LinearLayout header = toolbar("Диалоги", "Волшебно тут · Chatwoot");
+        LinearLayout header = toolbar("Диалоги", "Волшебно тут · Рабочее пространство");
+        Button channels = button("☰  " + selectedInboxName + "  ▾", false);
+        channels.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
+        channels.setPadding(dp(12), 0, dp(12), 0);
+        header.addView(channels, new LinearLayout.LayoutParams(-1, dp(40)));
+        channels.setOnClickListener(v -> selectInbox());
         LinearLayout actionRow = row();
         syncLabel = text("● Автообновление каждые 15 сек.", 12, GREEN, false);
         actionRow.addView(syncLabel, new LinearLayout.LayoutParams(0, dp(42), 1));
@@ -357,6 +404,7 @@ public final class MainActivity extends Activity {
         tabs.setPadding(dp(12), dp(12), dp(12), dp(10));
         addTab(tabs, "Открытые", "open");
         addTab(tabs, "Ожидание", "pending");
+        addTab(tabs, "Отложенные", "snoozed");
         addTab(tabs, "Закрытые", "resolved");
         addTab(tabs, "Все", "all");
         horizontal.addView(tabs);
@@ -465,14 +513,15 @@ public final class MainActivity extends Activity {
         final String requestedStatus = filterStatus;
         final String requestedQuery = query;
         final String requestedAssignee = assigneeType;
+        final int requestedInbox = selectedInbox;
         worker.execute(() -> {
             try {
-                JSONObject result = api.conversations(requestedStatus, requestedPage, requestedQuery, requestedAssignee);
+                JSONObject result = api.conversations(requestedStatus, requestedPage, requestedQuery, requestedAssignee, requestedInbox);
                 main.post(() -> {
                     if (screen != Screen.LIST || generation != request || conversationContainer == null) return;
                     listLoading = false;
                     String fingerprint = requestedPage + ":" + requestedStatus + ":" +
-                        requestedQuery + ":" + requestedAssignee + ":" + result.toString();
+                        requestedQuery + ":" + requestedAssignee + ":" + requestedInbox + ":" + result.toString();
                     if (!fingerprint.equals(lastListFingerprint) || indicate) {
                         renderConversations(result);
                         if (!lastListFingerprint.isEmpty() && conversationScroll != null) {
@@ -631,7 +680,7 @@ public final class MainActivity extends Activity {
             .setTitle("Подключение и уведомления")
             .setMessage("Сервер: " + credentials.server() + "\\nАккаунт: #" + account +
                 "\\n\\n" + PushBridge.status(this) +
-                "\\n\\nВерсия 0.5.0 (сборка 4). Автообновление списка и переписки: каждые 15 секунд.\nДля Push сервер Chatwoot должен иметь FIREBASE_PROJECT_ID и FIREBASE_CREDENTIALS.")
+                "\\n\\nВерсия 0.6.0 (сборка 5). Автообновление списка и переписки: каждые 15 секунд.\nДля Push сервер Chatwoot должен иметь FIREBASE_PROJECT_ID и FIREBASE_CREDENTIALS.")
             .setPositiveButton("Закрыть", (d, w) -> d.dismiss())
             .setNeutralButton("Проверить Push", (d, w) -> {
                 requestPushPermission();
@@ -672,6 +721,7 @@ public final class MainActivity extends Activity {
     }
 
     private void showChat(int id, String name, String status) {
+        if (sending) { showError("Дождись завершения отправки"); return; }
         screen = Screen.CHAT;
         currentConversation = id;
         currentName = name;
@@ -707,30 +757,298 @@ public final class MainActivity extends Activity {
         messageScroll.addView(messageContainer);
         root.addView(messageScroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
+        // Same mental model as desktop Chatwoot: Reply/private-note tabs, rich
+        // composer, attachment tray and a separate explicit Send action.
         LinearLayout composer = column();
-        composer.setPadding(dp(12), dp(10), dp(12), dp(12));
+        composer.setPadding(dp(12), dp(7), dp(12), dp(9));
         composer.setBackgroundColor(Color.WHITE);
+        LinearLayout mode = row();
         privateNote = new CheckBox(this);
-        privateNote.setText("Внутренняя заметка · видна только команде");
-        privateNote.setTextColor(NAVY);
-        privateNote.setTextSize(13);
-        composer.addView(privateNote);
-        LinearLayout write = row();
-        draft = field("Введите сообщение...", "", false);
+        replyMode = button("Ответ", true);
+        noteMode = button("Заметка 🔒", false);
+        mode.addView(replyMode, new LinearLayout.LayoutParams(0, dp(36), 1));
+        LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(0, dp(36), 1);
+        np.leftMargin = dp(6);
+        mode.addView(noteMode, np);
+        replyMode.setOnClickListener(v -> setComposerMode(false));
+        noteMode.setOnClickListener(v -> setComposerMode(true));
+        composer.addView(mode);
+        attachmentTray = column();
+        composer.addView(attachmentTray);
+        recordIndicator = text("", 13, Color.rgb(190, 40, 55), true);
+        recordIndicator.setVisibility(View.GONE);
+        composer.addView(recordIndicator);
+        draft = field("Написать ответ…", "", false);
         draft.setSingleLine(false);
-        draft.setMinLines(1);
-        draft.setMaxLines(4);
+        draft.setMinLines(2);
+        draft.setMaxLines(5);
+        draft.setGravity(Gravity.TOP | Gravity.LEFT);
+        draft.setPadding(dp(12), dp(10), dp(12), dp(8));
         draft.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        write.addView(draft, new LinearLayout.LayoutParams(0, dp(60), 1));
-        sendButton = button("➤", true);
-        sendButton.setContentDescription("Отправить сообщение");
-        LinearLayout.LayoutParams sendParams = new LinearLayout.LayoutParams(dp(59), dp(60));
-        sendParams.leftMargin = dp(8);
+        LinearLayout.LayoutParams dpLayout = new LinearLayout.LayoutParams(-1, -2);
+        dpLayout.topMargin = dp(6);
+        composer.addView(draft, dpLayout);
+        LinearLayout write = row();
+        attachButton = button("＋", false);
+        attachButton.setContentDescription("Прикрепить фото, видео или файлы");
+        write.addView(attachButton, new LinearLayout.LayoutParams(dp(42), dp(44)));
+        attachButton.setOnClickListener(v -> chooseAttachmentType());
+        micButton = button("🎙", false);
+        micButton.setContentDescription("Записать голосовое сообщение");
+        LinearLayout.LayoutParams micParams = new LinearLayout.LayoutParams(dp(48), dp(44));
+        micParams.leftMargin = dp(5);
+        write.addView(micButton, micParams);
+        micButton.setOnClickListener(v -> toggleRecording());
+        Button snippets = button("⚡", false);
+        snippets.setContentDescription("Готовые ответы и действия");
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(dp(43), dp(44));
+        cp.leftMargin = dp(5);
+        write.addView(snippets, cp);
+        snippets.setOnClickListener(v ->
+            ChatActions.show(this, api, currentConversation, currentName, draft, () -> loadMessages(true)));
+        View space = new View(this);
+        write.addView(space, new LinearLayout.LayoutParams(0, 1, 1));
+        sendButton = button("Отправить ➤", true);
+        sendButton.setContentDescription("Отправить сообщение или вложения");
+        LinearLayout.LayoutParams sendParams = new LinearLayout.LayoutParams(dp(126), dp(44));
+        sendParams.leftMargin = dp(6);
         write.addView(sendButton, sendParams);
         sendButton.setOnClickListener(v -> send());
-        composer.addView(write);
+        LinearLayout.LayoutParams wr = new LinearLayout.LayoutParams(-1, -2);
+        wr.topMargin = dp(6);
+        composer.addView(write, wr);
         root.addView(composer);
         loadMessages(true);
+    }
+
+
+    private void selectInbox() {
+        if (api == null) return;
+        final int request = generation;
+        final ApiClient client = api;
+        worker.execute(() -> {
+            try {
+                JSONArray found = client.inboxes();
+                if (found == null) found = new JSONArray();
+                ArrayList<String> names = new ArrayList<>();
+                ArrayList<Integer> ids = new ArrayList<>();
+                names.add("Все каналы"); ids.add(0);
+                for (int i = 0; i < found.length(); i++) {
+                    JSONObject item = found.optJSONObject(i);
+                    if (item == null || item.optInt("id", 0) < 1) continue;
+                    names.add(item.optString("name", "Канал #" + item.optInt("id")));
+                    ids.add(item.optInt("id"));
+                }
+                main.post(() -> {
+                    if (screen != Screen.LIST || api != client || isFinishing()) return;
+                    new AlertDialog.Builder(this)
+                        .setTitle("Входящие каналы")
+                        .setItems(names.toArray(new String[0]), (d, which) -> {
+                            selectedInbox = ids.get(which);
+                            selectedInboxName = names.get(which);
+                            page = 1;
+                            showList();
+                        }).setNegativeButton("Отмена", null).show();
+                });
+            } catch (Exception ex) { main.post(() -> showError(ex.getMessage())); }
+        });
+    }
+
+    private void setComposerMode(boolean note) {
+        if (sending || recorder != null || privateNote == null) return;
+        privateNote.setChecked(note);
+        replyMode.setBackground(bg(note ? PALE : BLUE, 8));
+        replyMode.setTextColor(note ? BLUE : Color.WHITE);
+        noteMode.setBackground(bg(note ? NOTE : PALE, 8));
+        noteMode.setTextColor(note ? Color.rgb(133, 87, 17) : BLUE);
+        draft.setBackground(bg(note ? NOTE : PALE, 10));
+        draft.setHint(note ? "Заметка — видна только команде" : "Написать ответ…");
+        sendButton.setText(note ? "Заметка ➤" : "Отправить ➤");
+    }
+
+    private void chooseAttachmentType() {
+        if (sending || recorder != null) return;
+        if (pendingAttachments.stream().anyMatch(a -> a.voice)) {
+            showError("Сначала отправь или удали голосовое сообщение");
+            return;
+        }
+        new AlertDialog.Builder(this).setTitle("Добавить вложение")
+            .setItems(new String[]{"Фото и видео", "Документы и другие файлы"}, (d, which) -> {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("*/*");
+                if (which == 0) intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/*", "video/*"});
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                pickerConversation = currentConversation;
+                try { startActivityForResult(intent, PICK_ATTACHMENTS); }
+                catch (Exception ex) { showError("Не удалось открыть системный выбор файлов"); }
+            }).setNegativeButton("Отмена", null).show();
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != PICK_ATTACHMENTS) return;
+        if (resultCode != RESULT_OK || data == null || screen != Screen.CHAT ||
+            currentConversation != pickerConversation || sending) return;
+        ArrayList<Uri> uris = new ArrayList<>();
+        ClipData clips = data.getClipData();
+        if (clips != null) {
+            for (int i = 0; i < Math.min(clips.getItemCount(), AttachmentDraft.MAX_COUNT); i++)
+                uris.add(clips.getItemAt(i).getUri());
+        } else if (data.getData() != null) uris.add(data.getData());
+        pickerConversation = -1;
+        for (Uri uri : uris) {
+            if (pendingAttachments.size() >= AttachmentDraft.MAX_COUNT) {
+                showError("Не более 10 вложений в одном сообщении");
+                break;
+            }
+            if (pendingAttachments.stream().anyMatch(item -> uri.equals(item.uri))) continue;
+            try {
+                AttachmentDraft item = AttachmentDraft.document(this, uri);
+                long total = Math.max(0, item.size);
+                for (AttachmentDraft old : pendingAttachments) total += Math.max(0, old.size);
+                if (total > AttachmentDraft.MAX_TOTAL) {
+                    showError("Общий размер вложений больше 80 МБ");
+                    continue;
+                }
+                pendingAttachments.add(item);
+            } catch (Exception ex) { showError(ex.getMessage()); }
+        }
+        updateAttachmentTray();
+    }
+
+    private void updateAttachmentTray() {
+        if (attachmentTray == null) return;
+        attachmentTray.removeAllViews();
+        for (AttachmentDraft item : new ArrayList<>(pendingAttachments)) {
+            LinearLayout entry = row();
+            entry.setPadding(dp(9), dp(3), dp(5), dp(3));
+            entry.setBackground(bg(PALE, 8));
+            LinearLayout details = column();
+            TextView title = text(item.voice ? "▶ Голосовое сообщение" : item.name, 13, NAVY, true);
+            title.setMaxLines(1);
+            title.setEllipsize(TextUtils.TruncateAt.END);
+            details.addView(title);
+            details.addView(text(item.kind() + (item.displaySize().isEmpty() ? "" : " · " + item.displaySize()), 11, SECONDARY, false));
+            entry.addView(details, new LinearLayout.LayoutParams(0, -2, 1));
+            if (item.voice && item.recording != null)
+                details.setOnClickListener(v -> AttachmentMedia.play(this, item.recording.getAbsolutePath()));
+            Button remove = button("✕", false);
+            remove.setContentDescription("Удалить " + item.name);
+            entry.addView(remove, new LinearLayout.LayoutParams(dp(38), dp(34)));
+            remove.setEnabled(!sending && recorder == null);
+            remove.setOnClickListener(v -> {
+                if (sending || recorder != null) return;
+                pendingAttachments.remove(item);
+                item.discard();
+                updateAttachmentTray();
+            });
+            LinearLayout.LayoutParams layout = new LinearLayout.LayoutParams(-1, -2);
+            layout.topMargin = dp(5);
+            attachmentTray.addView(entry, layout);
+        }
+    }
+
+    private void discardAttachments() {
+        for (AttachmentDraft attachment : pendingAttachments) attachment.discard();
+        pendingAttachments.clear();
+    }
+
+    private void toggleRecording() {
+        if (sending) return;
+        if (recorder != null) { finishRecording(true); return; }
+        if (!pendingAttachments.isEmpty()) {
+            showError("Голосовое отправляется отдельно от других вложений");
+            return;
+        }
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            permissionConversation = currentConversation;
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MICROPHONE_PERMISSION);
+            return;
+        }
+        startRecording();
+    }
+
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode != MICROPHONE_PERMISSION) return;
+        if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED &&
+            screen == Screen.CHAT && currentConversation == permissionConversation && foreground)
+            startRecording();
+        else if (results.length == 0 || results[0] != PackageManager.PERMISSION_GRANTED)
+            showError("Для голосовых сообщений нужен доступ к микрофону");
+        permissionConversation = -1;
+    }
+
+    private void startRecording() {
+        if (screen != Screen.CHAT || sending || recorder != null || !pendingAttachments.isEmpty()) return;
+        try {
+            recordingFile = File.createTempFile("crm-voice-", ".m4a", getCacheDir());
+            recorder = Build.VERSION.SDK_INT >= 31 ? new MediaRecorder(this) : new MediaRecorder();
+            recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            recorder.setAudioSamplingRate(44100);
+            recorder.setAudioEncodingBitRate(64000);
+            recorder.setOutputFile(recordingFile.getAbsolutePath());
+            recorder.prepare();
+            recorder.start();
+            recordStarted = SystemClock.elapsedRealtime();
+            micButton.setText("■");
+            micButton.setContentDescription("Остановить запись");
+            attachButton.setEnabled(false);
+            sendButton.setEnabled(false);
+            replyMode.setEnabled(false);
+            noteMode.setEnabled(false);
+            recordIndicator.setVisibility(View.VISIBLE);
+            main.post(recordingClock);
+        } catch (Exception ex) {
+            finishRecording(false);
+            showError("Не удалось включить микрофон: " + ex.getMessage());
+        }
+    }
+
+    private void finishRecording(boolean keep) {
+        main.removeCallbacks(recordingClock);
+        MediaRecorder active = recorder;
+        File file = recordingFile;
+        recorder = null;
+        recordingFile = null;
+        boolean valid = false;
+        if (active != null) {
+            try { active.stop(); valid = true; } catch (RuntimeException ignored) { }
+            try { active.release(); } catch (RuntimeException ignored) { }
+        }
+        if (keep && valid && file != null && file.length() > 0 && screen == Screen.CHAT) {
+            pendingAttachments.add(AttachmentDraft.voice(file));
+        } else if (file != null) {
+            file.delete();
+            if (keep) showError("Слишком короткая запись");
+        }
+        if (micButton != null) {
+            micButton.setText("🎙");
+            micButton.setContentDescription("Записать голосовое сообщение");
+        }
+        if (recordIndicator != null) recordIndicator.setVisibility(View.GONE);
+        setSendingUi(false);
+        updateAttachmentTray();
+    }
+
+    private void setSendingUi(boolean active) {
+        sending = active;
+        if (sendButton != null) {
+            sendButton.setEnabled(!active);
+            sendButton.setText(active ? "Отправка…" :
+                privateNote != null && privateNote.isChecked() ? "Заметка ➤" : "Отправить ➤");
+        }
+        if (draft != null) draft.setEnabled(!active);
+        if (attachButton != null) attachButton.setEnabled(!active);
+        if (micButton != null) micButton.setEnabled(!active);
+        if (replyMode != null) replyMode.setEnabled(!active);
+        if (noteMode != null) noteMode.setEnabled(!active);
+        if (statusButton != null) statusButton.setEnabled(!active);
+        updateAttachmentTray();
     }
 
     private void loadMessages(boolean indicate) {
@@ -739,6 +1057,7 @@ public final class MainActivity extends Activity {
         final int request = generation;
         loadingMessages = true;
         if (indicate) {
+            lastMessageFingerprint = "";
             messageContainer.removeAllViews();
             TextView loading = text("Загрузка переписки…", 15, SECONDARY, false);
             loading.setGravity(Gravity.CENTER);
@@ -844,30 +1163,37 @@ public final class MainActivity extends Activity {
     }
 
     private void send() {
-        if (screen != Screen.CHAT || draft == null || sendButton == null) return;
+        if (screen != Screen.CHAT || draft == null || sendButton == null || sending || recorder != null) return;
         final String body = draft.getText().toString().trim();
-        if (body.isBlank()) return;
+        final ArrayList<AttachmentDraft> files = new ArrayList<>(pendingAttachments);
+        if (body.isBlank() && files.isEmpty()) return;
         final int id = currentConversation;
         final int request = generation;
         final boolean note = privateNote != null && privateNote.isChecked();
-        sendButton.setEnabled(false);
-        sendButton.setText("...");
+        final ApiClient client = api;
+        setSendingUi(true);
         worker.execute(() -> {
             try {
-                api.sendMessage(id, body, note);
+                JSONObject result = files.isEmpty() ? client.sendMessage(id, body, note) :
+                    client.sendAttachments(getApplicationContext(), id, body, note, files);
+                for (AttachmentDraft file : files) file.discard();
                 main.post(() -> {
-                    if (screen != Screen.CHAT || request != generation || currentConversation != id) return;
+                    if (screen != Screen.CHAT || request != generation || currentConversation != id || isDestroyed()) return;
+                    pendingAttachments.clear();
                     if (draft != null) draft.setText("");
-                    if (sendButton != null) { sendButton.setEnabled(true); sendButton.setText("➤"); }
+                    setSendingUi(false);
                     loadMessages(false);
+                    if ("failed".equals(result.optString("status", "")))
+                        showError("Chatwoot принял сообщение, но канал не смог доставить его");
                 });
             } catch (Exception ex) {
                 main.post(() -> {
+                    if (isDestroyed()) { for (AttachmentDraft file : files) file.discard(); return; }
                     if (screen != Screen.CHAT || request != generation || currentConversation != id) return;
-                    if (sendButton != null) { sendButton.setEnabled(true); sendButton.setText("➤"); }
+                    setSendingUi(false);
                     new AlertDialog.Builder(this)
-                        .setTitle("Сообщение не подтверждено")
-                        .setMessage(ex.getMessage() + "\n\nПроверь переписку перед повторной отправкой, чтобы не создать дубликат.")
+                        .setTitle("Отправка не подтверждена")
+                        .setMessage(ex.getMessage() + "\n\nЧерновик и вложения сохранены. Проверь переписку перед повтором.")
                         .setPositiveButton("Понятно", null).show();
                 });
             }
@@ -916,6 +1242,14 @@ public final class MainActivity extends Activity {
     }
 
     @Override public void onBackPressed() {
+        if (sending) { showError("Дождись завершения отправки"); return; }
+        if (screen == Screen.CHAT && recorder != null) { finishRecording(false); return; }
+        if (screen == Screen.CHAT && !pendingAttachments.isEmpty()) {
+            new AlertDialog.Builder(this).setTitle("Удалить черновик с вложениями?")
+                .setNegativeButton("Остаться", null)
+                .setPositiveButton("Удалить", (d, w) -> showList()).show();
+            return;
+        }
         if (screen == Screen.CHAT) showList();
         else super.onBackPressed();
     }
