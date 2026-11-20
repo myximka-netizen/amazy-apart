@@ -1,4 +1,4 @@
-# Волшебно тут CRM Native · v0.5
+# Волшебно тут CRM Native · v0.6
 
 Independent **native Android** Chatwoot client (no WebView). Uses the Chatwoot Application API and Firebase Cloud Messaging.
 
@@ -8,7 +8,8 @@ Independent **native Android** Chatwoot client (no WebView). Uses the Chatwoot A
 - Scope filters: Mine / Unassigned / All; status filters: Open / Pending / Resolved / All; full-text message search and pagination.
 - Automatic conversation list refresh every 15 seconds while in foreground. Refresh also runs immediately when the app reopens.
 - Automatic foreground message refresh every 15 seconds without forcibly scrolling away from older messages.
-- Native reply, internal note, attachments (open links), mark read, status Open / Pending / Resolved.
+- Native reply/private-note tabs, multi-file attachment picker, image/video/document/audio upload via multipart Chatwoot API, voice recording (AAC/M4A) with playback and explicit send, inline photo thumbnails and audio playback. 40 MiB per file / 80 MiB per message / 10 files; lower server or channel limits may apply. Chatwoot/Telegram determines whether recorded audio appears as a native voice bubble or as an audio attachment. Video and documents open using Android viewers.
+- Inbox selection, message author/date separators and delivery state, mark read, status Open / Pending / Resolved.
 - Actions menu: contact details, operator assignment, priority and canned replies (insert into composer, never auto-send).
 - Push subscription through FCM; on-device push registration status available from settings. **Foreground polling is not a replacement for background FCM.**
 - Chatwoot access token encrypted by Android Keystore; HTTPS-only API.
@@ -21,7 +22,7 @@ Independent **native Android** Chatwoot client (no WebView). Uses the Chatwoot A
 - Build debug locally with `gradle :app:assembleDebug`.
 - CI workflow: `.github/workflows/build-chatwoot-native-apk.yml`.
 - CI installs and starts the debug APK in an Android 15 emulator.
-- Release version 0.5.0 (`versionCode 4`).
+- Release version 0.6.0 (`versionCode 5`).
 
 ## Permanent signing for in-place updates
 
