@@ -12,6 +12,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install playwright==1.56.1 fastapi==0.115.12 uvicorn==0.34.2 httpx==0.28.1
+      - run: pip install playwright==1.64.1 fastapi==0.115.12 uvicorn==0.34.2 httpx==0.28.1
       - run: python -m unittest discover -s web-bridge -v
       - run: docker build -t web-bridge-ci web-bridge
