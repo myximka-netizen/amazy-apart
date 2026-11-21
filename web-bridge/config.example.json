@@ -1,0 +1,19 @@
+{
+  "adapter": "sutochno",
+  "mode": "inspect",
+  "start_url": "https://extranet.sutochno.ru/",
+  "thread_urls": [],
+  "poll_seconds": 30,
+  "import_existing": false,
+  "selectors": {
+    "ready": "",
+    "thread_title": "",
+    "message": "",
+    "message_id_attribute": "",
+    "message_text": "",
+    "incoming": "",
+    "outgoing": "",
+    "composer": "",
+    "send_button": ""
+  }
+}

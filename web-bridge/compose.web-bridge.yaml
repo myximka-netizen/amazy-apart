@@ -1,0 +1,21 @@
+services:
+  web-bridge:
+    build:
+      context: ./web-bridge
+    env_file:
+      - ./web-bridge/.env.local
+    volumes:
+      - web_bridge_data:/data
+      - ./web-bridge/config.local.json:/config/config.json:ro
+    ports:
+      - "127.0.0.1:6080:6080"
+    shm_size: 512mb
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+volumes:
+  web_bridge_data:
