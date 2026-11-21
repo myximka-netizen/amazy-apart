@@ -7,6 +7,11 @@ agent = User.new(name: 'Test operator', email: 'operator@example.org', password:
 agent.skip_confirmation!
 agent.save!
 AccountUser.create!(account: account, user: agent, role: :administrator)
+watcher = User.new(name: 'Personal alerts', email: 'alerts@example.org', password: ENV.fetch('CRM_TEST_PASSWORD'))
+watcher.skip_confirmation!
+watcher.save!
+raise 'Expected personal operator 2' unless watcher.id == 2
+AccountUser.create!(account: account, user: watcher, role: :administrator)
 channel = Channel::Api.create!(account: account)
 inbox = account.inboxes.create!(name: 'Test API inbox', channel: channel)
 inbox.inbox_members.create!(user: agent)

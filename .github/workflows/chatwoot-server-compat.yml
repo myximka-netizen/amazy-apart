@@ -5,6 +5,7 @@ on:
     paths:
       - 'chatwoot-official/server/compat/**'
       - 'chatwoot-official/server/check_push.rb'
+      - 'chatwoot-official/server/incoming/**'
       - '.github/workflows/chatwoot-server-compat.yml'
   workflow_dispatch:
 permissions:
@@ -43,7 +44,10 @@ jobs:
           docker cp chatwoot-official/server/compat/seed.rb crm-server:/tmp/crm-qa/seed.rb
           docker exec crm-server bundle exec rails runner /tmp/crm-qa/seed.rb
           docker exec crm-server cat /tmp/crm-fixtures.json > "$RUNNER_TEMP/crm-fixtures.json"
-          docker exec -d crm-server bundle exec sidekiq -c 3 -q critical -q high -q default
+          mkdir -p "$RUNNER_TEMP/worker"
+          cp chatwoot-official/server/compat/worker-compose.yaml "$RUNNER_TEMP/worker/compose.yaml"
+          cp "$cfg" "$RUNNER_TEMP/worker/compat.env"
+          (cd "$RUNNER_TEMP/worker" && docker compose up -d)
       - name: Create test attachments
         run: |
           if ! command -v ffmpeg >/dev/null; then sudo apt-get -qq update && sudo apt-get -qq install -y ffmpeg >/dev/null; fi
@@ -64,3 +68,17 @@ jobs:
           "$RUNNER_TEMP/compat-venv/bin/python" chatwoot-official/server/compat/check.py
       - name: Validate live-server diagnostic without production credentials
         run: docker exec -i crm-server bundle exec rails runner - < chatwoot-official/server/check_push.rb
+      - name: Install and verify personal incoming alerts on the running Compose worker
+        shell: pwsh
+        run: |
+          $scripts = Join-Path $env:GITHUB_WORKSPACE 'chatwoot-official/server'
+          Set-Location (Join-Path $env:RUNNER_TEMP 'worker')
+          Copy-Item "$scripts/incoming/amazy_incoming_push.rb" .
+          & "$scripts/incoming/install.ps1"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & "$scripts/incoming/install.ps1" -DisableAutoAssignment
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          docker compose restart sidekiq
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Get-Content -Raw "$scripts/compat/incoming.rb" | docker compose exec -T sidekiq bundle exec rails runner -
+          exit $LASTEXITCODE

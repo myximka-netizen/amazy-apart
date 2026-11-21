@@ -1,0 +1,9 @@
+services:
+  sidekiq:
+    volumes:
+      - type: bind
+        source: ./amazy_incoming_push.rb
+        target: /app/config/initializers/amazy_incoming_push.rb
+        read_only: true
+        bind:
+          create_host_path: false
