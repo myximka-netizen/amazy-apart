@@ -32,14 +32,17 @@ def observe(inbox, assignee, operator, visibility: true)
   wanted = conversation.notifications.where(user: operator, secondary_actor: messages)
   deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 30
   if visibility
-    until wanted.distinct.count(:secondary_actor_id) == 2
-      raise 'Worker did not route both incoming messages' if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+    until Notification.uncached { wanted.distinct.count(:secondary_actor_id) } == 2
+      if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+        actual = Notification.uncached { conversation.notifications.pluck(:user_id, :secondary_actor_type, :secondary_actor_id) }
+        raise "Worker did not route both incoming messages. Expected #{messages.map(&:id).inspect}, observed #{actual.inspect}."
+      end
       sleep 0.25
     end
   end
   messages.each { |m| Messages::NewMessageNotificationService.new(message: m).perform }
   if visibility
-    ids = wanted.pluck(:id)
+    ids = Notification.uncached { wanted.pluck(:id) }
     loop do
       path = '/tmp/crm-qa-personal-fcm.jsonl'
       events = File.exist?(path) ? File.readlines(path).map { |line| JSON.parse(line) } : []
@@ -53,7 +56,7 @@ def observe(inbox, assignee, operator, visibility: true)
     end
   end
   expected = visibility ? 2 : 0
-  raise 'Missing, duplicate or unauthorized notifications' unless wanted.count == expected
+  raise 'Missing, duplicate or unauthorized notifications' unless Notification.uncached { wanted.count } == expected
   raise 'Conversation was reassigned or operator was enrolled as a participant' unless conversation.reload.assignee_id == assignee&.id && conversation.conversation_participants.where(user: operator).none?
   messages
 end

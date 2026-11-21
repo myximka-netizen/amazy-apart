@@ -83,3 +83,8 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Get-Content -Raw "$scripts/compat/incoming.rb" | docker compose exec -T sidekiq bundle exec rails runner -
           exit $LASTEXITCODE
+      - name: Show isolated worker errors
+        if: failure()
+        run: |
+          cd "$RUNNER_TEMP/worker"
+          docker compose logs --tail 1200 sidekiq | rg 'Error|Exception|failed|WARN|ERROR' | cut -c1-360 | tail -30 || true

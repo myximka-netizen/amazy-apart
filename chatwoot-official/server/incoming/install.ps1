@@ -48,7 +48,7 @@ if (Test-Path -LiteralPath $modulePath) {
 } else {
     $download = [IO.Path]::GetTempFileName()
     try {
-        Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/myximka-netizen/amazy-apart/chatwoot-official-android/chatwoot-official/server/incoming/amazy_incoming_push.rb' -OutFile $download
+        Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/myximka-netizen/amazy-apart/334ca3a6ea3c0f8428485d300d944139f1862b83/chatwoot-official/server/incoming/amazy_incoming_push.rb' -OutFile $download
         if ((Get-FileHash -LiteralPath $download).Hash -ne $moduleHash) { throw 'Initializer checksum mismatch.' }
         [IO.File]::Copy($download, $modulePath, $false)
     } finally { Remove-Item -LiteralPath $download -Force }
