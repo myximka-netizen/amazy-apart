@@ -57,7 +57,11 @@ def observe(inbox, assignee, operator, visibility: true)
   end
   expected = visibility ? 2 : 0
   raise 'Missing, duplicate or unauthorized notifications' unless Notification.uncached { wanted.count } == expected
-  raise 'Conversation was reassigned or operator was enrolled as a participant' unless conversation.reload.assignee_id == assignee&.id && conversation.conversation_participants.where(user: operator).none?
+  raise 'Conversation was reassigned' unless conversation.reload.assignee_id == assignee&.id
+  # Chatwoot itself enrolls the real assignee via ParticipationListener.
+  if assignee != operator && conversation.conversation_participants.where(user: operator).exists?
+    raise 'Watcher enrolled as a participant without an assignment'
+  end
   messages
 end
 
