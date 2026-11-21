@@ -7,6 +7,17 @@ abort 'Native push flags missing' unless operator.notification_settings.find_by!
 abort 'Expected optional disablement of auto-assignment' if inbox.reload.enable_auto_assignment?
 abort 'Existing assignments lost' unless account.conversations.where(assignee: other).exists?
 
+# Configure a synthetic target for the test-only transport in this worker.
+%w[FIREBASE_PROJECT_ID FIREBASE_CREDENTIALS].each do |name|
+  record = InstallationConfig.find_or_initialize_by(name: name)
+  record.value = name == 'FIREBASE_PROJECT_ID' ? 'local-capture' : '{}'
+  record.save!
+end
+GlobalConfig.clear_cache
+NotificationSubscriptionBuilder.new(user: operator, params: {
+  subscription_type: 'fcm', subscription_attributes: { device_id: 'qa-phone', devicePlatform: 'Android', push_token: 'qa-personal-device' }
+}.with_indifferent_access).perform
+
 def observe(inbox, assignee, operator, visibility: true)
   chat = inbox.conversations.first!
   conversation = inbox.conversations.create!(account: inbox.account, contact: chat.contact,
@@ -27,6 +38,20 @@ def observe(inbox, assignee, operator, visibility: true)
     end
   end
   messages.each { |m| Messages::NewMessageNotificationService.new(message: m).perform }
+  if visibility
+    ids = wanted.pluck(:id)
+    loop do
+      path = '/tmp/crm-qa-personal-fcm.jsonl'
+      events = File.exist?(path) ? File.readlines(path).map { |line| JSON.parse(line) } : []
+      delivered = events.select { |e| ids.include?(e['id']) }
+      if delivered.size >= 2
+        raise 'Wrong FCM actor or duplicate' unless delivered.map { |e| e['id'] }.sort == ids.sort && delivered.all? { |e| e['account_id'] == 2 && e.dig('primary_actor', 'id') == conversation.display_id }
+        break
+      end
+      raise 'Worker did not send both notifications to the FCM transport' if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+      sleep 0.25
+    end
+  end
   expected = visibility ? 2 : 0
   raise 'Missing, duplicate or unauthorized notifications' unless wanted.count == expected
   raise 'Conversation was reassigned or operator was enrolled as a participant' unless conversation.reload.assignee_id == assignee&.id && conversation.conversation_participants.where(user: operator).none?

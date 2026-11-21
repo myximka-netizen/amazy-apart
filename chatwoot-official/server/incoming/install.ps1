@@ -42,7 +42,7 @@ $before = Config $paths
 $target = '/app/config/initializers/amazy_incoming_push.rb'
 $modulePath = Join-Path $directory 'amazy_incoming_push.rb'
 $existing = @($before.services.sidekiq.volumes | Where-Object { $_ -and $_.target -eq $target })
-$moduleHash = '9d8633c5d56af6700b37339a0e112cb5a9a71ba7e513d8faac087dec9b6b5185'
+$moduleHash = '4bf563dc03e9c6bca8d87daf43553f4348a08a63a2255d6d7fa492a8d20db05f'
 if (Test-Path -LiteralPath $modulePath) {
     if ((Get-FileHash -LiteralPath $modulePath).Hash -ne $moduleHash) { throw "A different file already exists at $modulePath." }
 } else {

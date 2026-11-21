@@ -23,3 +23,29 @@ Rails.application.config.to_prepare do
   service = Messages::NewMessageNotificationService
   service.prepend(AmazyIncomingPush) unless service < AmazyIncomingPush
 end
+
+# Upstream removes all but the newest notification in a conversation. Its
+# delivery job takes a GlobalID, so deleting an earlier row can lose the push
+# when two messages arrive before the default queue drains.
+module AmazyIncomingPushRetention
+  def perform(notification)
+    return super unless notification.is_a?(Notification) && notification.account_id == AmazyIncomingPush::ACCOUNT_ID &&
+                        notification.user_id == AmazyIncomingPush::OPERATOR_ID && notification.primary_actor_type == 'Conversation'
+
+    group = Notification.where(account_id: notification.account_id, user_id: notification.user_id,
+                               primary_actor_type: 'Conversation', primary_actor_id: notification.primary_actor_id)
+    latest = group.order(created_at: :desc, id: :desc).pick(:id)
+    guests = Message.where(account_id: notification.account_id, conversation_id: notification.primary_actor_id,
+                           message_type: :incoming, private: false)
+    # Keep recent guest alerts through Sidekiq delivery/retries. On the next
+    # event older alerts are coalesced as usual. Never delete another account's rows.
+    protected_rows = group.where(secondary_actor_type: 'Message', secondary_actor_id: guests.select(:id))
+                          .where(created_at: 7.days.ago..)
+    group.where.not(id: latest).where.not(id: protected_rows.select(:id)).find_each(&:destroy!)
+  end
+end
+
+Rails.application.config.to_prepare do
+  job = Notification::RemoveDuplicateNotificationJob
+  job.prepend(AmazyIncomingPushRetention) unless job < AmazyIncomingPushRetention
+end

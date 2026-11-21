@@ -3,6 +3,10 @@ services:
     image: chatwoot/chatwoot:v4.19.1@sha256:a0d571a3a2f78f4fa4b1d7c21a53309c0184068d6021b3664ab37788faef04c1
     env_file: ./compat.env
     command: bundle exec sidekiq -c 3 -q critical -q high -q default
+    environment:
+      CRM_CAPTURE_FCM: test
+    volumes:
+      - ./fcm_capture.rb:/app/config/initializers/qa_capture_fcm.rb:ro
     networks: [crm]
 networks:
   crm:

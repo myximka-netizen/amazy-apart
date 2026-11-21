@@ -46,6 +46,7 @@ jobs:
           docker exec crm-server cat /tmp/crm-fixtures.json > "$RUNNER_TEMP/crm-fixtures.json"
           mkdir -p "$RUNNER_TEMP/worker"
           cp chatwoot-official/server/compat/worker-compose.yaml "$RUNNER_TEMP/worker/compose.yaml"
+          cp chatwoot-official/server/compat/fcm_capture.rb "$RUNNER_TEMP/worker/fcm_capture.rb"
           cp "$cfg" "$RUNNER_TEMP/worker/compat.env"
           (cd "$RUNNER_TEMP/worker" && docker compose up -d)
       - name: Create test attachments
