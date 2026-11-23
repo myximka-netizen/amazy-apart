@@ -66,8 +66,11 @@ def observe(inbox, assignee, operator, visibility: true)
 end
 
 inbox.inbox_members.find_or_create_by!(user: operator)
-observe(inbox, nil, operator)
+unassigned = observe(inbox, nil, operator).first.conversation
 puts 'PASS unassigned: first and repeat incoming, restart-safe event replay'
+ENV['CRM_CONVERSATION_ID'] = unassigned.display_id.to_s
+ENV['CRM_PROBE_SUBSCRIPTION'] = NotificationSubscription.fcm.find_by!(user: operator).id.to_s
+load '/tmp/crm-trace.rb'
 observe(inbox, other, operator)
 puts 'PASS assigned to another operator: no transfer, no participant change'
 observe(inbox, operator, operator)

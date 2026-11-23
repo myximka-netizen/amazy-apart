@@ -12,7 +12,7 @@ module CaptureSyntheticFcm
         log.puts(event.to_json)
       end
     end
-    { body: '{}' }
+    { status_code: 200, body: '{"name":"projects/local-capture/messages/test"}' }
   end
 end
 

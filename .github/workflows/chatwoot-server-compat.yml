@@ -91,7 +91,12 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           docker compose restart sidekiq
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          Get-Content -Raw "$scripts/compat/incoming.rb" | docker compose exec -T sidekiq bundle exec rails runner -
+          docker compose cp "$scripts/incoming/trace.rb" sidekiq:/tmp/crm-trace.rb
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $result = Get-Content -Raw "$scripts/compat/incoming.rb" | docker compose exec -T sidekiq bundle exec rails runner -
+          $result | Write-Output
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if (-not ($result -match 'CRM native_probe=.+ http=200 accepted=true')) { throw 'Native diagnostic missed the simulated FCM receipt.' }
           exit $LASTEXITCODE
       - name: Show isolated worker errors
         if: failure()
