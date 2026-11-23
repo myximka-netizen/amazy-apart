@@ -11,6 +11,16 @@ on:
 permissions:
   contents: read
 jobs:
+  windows-installer:
+    runs-on: windows-2022
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install with case-sensitive Docker environment keys in Windows PowerShell 5.1
+        shell: powershell
+        run: ./chatwoot-official/server/compat/windows-installer.ps1
   compatibility:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

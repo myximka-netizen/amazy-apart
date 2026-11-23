@@ -19,9 +19,22 @@ function ComposeArgs([string[]]$paths) {
     foreach ($path in $paths) { $arguments += @('-f', $path) }
     return $arguments
 }
+# Compose environment and label names are case-sensitive. The framework JSON
+# reader preserves them even in Windows PowerShell 5.1 (no -AsHashtable).
+function ReadDockerJson([string]$json) {
+    if ($PSVersionTable.PSVersion.Major -le 5) { Add-Type -AssemblyName System.Runtime.Serialization }
+    $reader = [System.Runtime.Serialization.Json.JsonReaderWriterFactory]::CreateJsonReader(
+        [Text.Encoding]::UTF8.GetBytes($json), [System.Xml.XmlDictionaryReaderQuotas]::Max)
+    try {
+        $document = New-Object System.Xml.XmlDocument
+        $document.PreserveWhitespace = $true
+        $document.Load($reader)
+        return ,$document
+    } finally { $reader.Dispose() }
+}
 function Config([string[]]$paths) {
     $argsList = @(ComposeArgs $paths) + @('config', '--format', 'json')
-    return (DockerText $argsList | ConvertFrom-Json)
+    return ,(ReadDockerJson (DockerText $argsList))
 }
 function RubyRunner([string[]]$paths, [string]$program) {
     $argsList = @(ComposeArgs $paths) + @('exec','-T','sidekiq','bundle','exec','rails','runner',$program)
@@ -30,18 +43,20 @@ function RubyRunner([string[]]$paths, [string]$program) {
 
 $id = (DockerText @('compose','ps','-q','sidekiq')).Trim()
 if (!$id -or $id -match '\s') { throw 'Run in the project directory with one running sidekiq service.' }
-$meta = (DockerText @('inspect',$id) | ConvertFrom-Json)[0]
-$labels = $meta.Config.Labels
-$project = $labels.'com.docker.compose.project'
-$paths = @($labels.'com.docker.compose.project.config_files' -split ',' | ForEach-Object { HostPath $_ })
-$directory = HostPath $labels.'com.docker.compose.project.working_dir'
+$meta = ReadDockerJson (DockerText @('inspect',$id))
+$labels = $meta.SelectSingleNode('/root/item/Config/Labels')
+$project = $labels.SelectSingleNode('com.docker.compose.project').InnerText
+$paths = @($labels.SelectSingleNode('com.docker.compose.project.config_files').InnerText -split ',' | ForEach-Object { HostPath $_ })
+$directory = HostPath ($labels.SelectSingleNode('com.docker.compose.project.working_dir').InnerText)
 if ((Get-Location).Path -ne $directory) { throw "Run this script from $directory." }
 $versionCheck = "abort unless Chatwoot.config[:version].to_s == [4,19,1].join(46.chr); AccountUser.find_by!(account_id: 2, user_id: 2); puts :preflight_ok"
 if ((RubyRunner $paths $versionCheck) -notmatch 'preflight_ok') { throw 'Chatwoot 4.19.1 and operator 2 in account 2 are required.' }
 $before = Config $paths
 $target = '/app/config/initializers/amazy_incoming_push.rb'
 $modulePath = Join-Path $directory 'amazy_incoming_push.rb'
-$existing = @($before.services.sidekiq.volumes | Where-Object { $_ -and $_.target -eq $target })
+$volumesPath = '/root/services/sidekiq/volumes'
+$mountPath = "$volumesPath/item[target='$target']"
+$existing = @($before.SelectNodes($mountPath))
 $moduleHash = '4bf563dc03e9c6bca8d87daf43553f4348a08a63a2255d6d7fa492a8d20db05f'
 if (Test-Path -LiteralPath $modulePath) {
     if ((Get-FileHash -LiteralPath $modulePath).Hash -ne $moduleHash) { throw "A different file already exists at $modulePath." }
@@ -64,7 +79,8 @@ $recreated = $false
 $published = $false
 $up = @(ComposeArgs $paths) + @('up','-d','--no-deps','--no-build','--pull','never','sidekiq')
 if ($existing.Count -gt 0) {
-    if ($existing.Count -ne 1 -or !$existing[0].read_only -or (HostPath $existing[0].source) -ne $modulePath) {
+    if ($existing.Count -ne 1 -or $existing[0].SelectSingleNode('type').InnerText -cne 'bind' -or
+        $existing[0].SelectSingleNode('read_only').InnerText -cne 'true' -or (HostPath ($existing[0].SelectSingleNode('source').InnerText)) -ne $modulePath) {
         throw 'The initializer mount is already occupied by another file.'
     }
 } else {
@@ -102,19 +118,24 @@ if ($existing.Count -gt 0) {
         $trialPaths = @($paths.Clone())
         $trialPaths[-1] = $temp
         $after = Config $trialPaths
-        $newMount = @($after.services.sidekiq.volumes | Where-Object { $_.target -eq $target })
-        if ($newMount.Count -ne 1 -or !$newMount[0].read_only -or (HostPath $newMount[0].source) -ne $modulePath) { throw 'Could not verify the new mount.' }
-        $others = @($after.services.sidekiq.volumes | Where-Object { $_.target -ne $target })
-        if (!$before.services.sidekiq.PSObject.Properties['volumes']) { $after.services.sidekiq.PSObject.Properties.Remove('volumes') }
-        else { $after.services.sidekiq.volumes = $others }
-        if (($before | ConvertTo-Json -Depth 100 -Compress) -cne ($after | ConvertTo-Json -Depth 100 -Compress)) { throw 'The proposed change affects other Compose settings. See the manual bind-mount instructions.' }
+        $newMount = @($after.SelectNodes($mountPath))
+        if ($newMount.Count -ne 1 -or $newMount[0].SelectSingleNode('type').InnerText -cne 'bind' -or
+            $newMount[0].SelectSingleNode('read_only').InnerText -cne 'true' -or (HostPath ($newMount[0].SelectSingleNode('source').InnerText)) -ne $modulePath) { throw 'Could not verify the new mount.' }
+        $volumes = $newMount[0].ParentNode
+        [void]$volumes.RemoveChild($newMount[0])
+        if (!$volumes.HasChildNodes) {
+            $oldVolumes = $before.SelectSingleNode($volumesPath)
+            if ($null -eq $oldVolumes) { [void]$volumes.ParentNode.RemoveChild($volumes) }
+            else { $volumes.IsEmpty = $oldVolumes.IsEmpty }
+        }
+        if (![string]::Equals($before.OuterXml, $after.OuterXml, [StringComparison]::Ordinal)) { throw 'The proposed change affects other Compose settings. See the manual bind-mount instructions.' }
         if ([IO.File]::ReadAllText($composePath,$encoding) -cne $original) { throw 'Compose file changed concurrently.' }
         [IO.File]::Copy($temp,$composePath,$true)
         $changed = $true
     } finally { if (Test-Path -LiteralPath $temp) { Remove-Item -LiteralPath $temp -Force } }
 }
 try {
-    $runningMount = @($meta.Mounts | Where-Object { $_.Destination -eq $target -and !$_.RW })
+    $runningMount = @($meta.SelectNodes("/root/item/Mounts/item[Destination='$target' and RW='false']"))
     if ($changed -or $runningMount.Count -eq 0) { $recreated=$true; DockerText $up | Out-Host }
     $setup = 'abort unless Messages::NewMessageNotificationService < AmazyIncomingPush; Account.transaction { s = NotificationSetting.find_by!(account_id: 2, user_id: 2); s.with_lock { s.push_assigned_conversation_new_message = true; s.push_participating_conversation_new_message = true; s.save! }; '
     if ($DisableAutoAssignment) { $setup += 'Account.find(2).inboxes.where(enable_auto_assignment: true).each { |i| i.update!(enable_auto_assignment: false) }; ' }
